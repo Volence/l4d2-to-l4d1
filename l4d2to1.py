@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""Downconvert an L4D2 (VBSP 21) map to L4D1 (VBSP 20).
+
+Container: v21 lump_t is (version, ofs, len, fourCC); v20 is (ofs, len, version, fourCC).
+Static props: sprp v9 is v8 plus 4 trailing bytes per record.
+Entities: ESC output separators become commas, L4D2-only spawns become L4D1 ones or go away.
+"""
+import re, struct, sys, zlib, collections, math
+
+W = {  # L4D1 weapon spawn classname -> (model, count)
+    'weapon_smg_spawn': ('models/w_models/weapons/w_smg_uzi.mdl', '4'),
+    'weapon_pumpshotgun_spawn': ('models/w_models/weapons/w_shotgun.mdl', '4'),
+    'weapon_autoshotgun_spawn': ('models/w_models/weapons/w_autoshot_m4super.mdl', '5'),
+    'weapon_rifle_spawn': ('models/w_models/weapons/w_rifle_m16a2.mdl', '5'),
+    'weapon_hunting_rifle_spawn': ('models/w_models/weapons/w_sniper_mini14.mdl', '5'),
+    'weapon_pistol_spawn': ('models/w_models/weapons/w_pistol_1911.mdl', '4'),
+    'weapon_ammo_spawn': ('models/props_unique/spawn_apartment/coffeeammo.mdl', '0'),
+}
+SELECTION = {  # weapon_spawn weapon_selection -> candidate L4D1 classes
+    'tier1_shotgun': ['weapon_pumpshotgun_spawn'],
+    'any_smg': ['weapon_smg_spawn'],
+    'tier1_any': ['weapon_smg_spawn', 'weapon_pumpshotgun_spawn'],
+    'tier2_shotgun': ['weapon_autoshotgun_spawn'],
+    'any_rifle': ['weapon_rifle_spawn'],
+    'any_sniper_rifle': ['weapon_hunting_rifle_spawn'],
+    'tier2_any': ['weapon_autoshotgun_spawn', 'weapon_rifle_spawn', 'weapon_hunting_rifle_spawn'],
+    'any_primary': ['weapon_smg_spawn', 'weapon_pumpshotgun_spawn', 'weapon_autoshotgun_spawn',
+                    'weapon_rifle_spawn', 'weapon_hunting_rifle_spawn'],
+    'any_pistol': ['weapon_pistol_spawn'],
+}
+ITEMS = {  # weapon_item_spawn flags (L4D2 FGD) -> L4D1 class; None = no L4D1 equivalent
+    'item1': 'weapon_ammo_spawn', 'item2': 'weapon_first_aid_kit_spawn', 'item3': 'weapon_molotov_spawn',
+    'item4': 'weapon_pain_pills_spawn', 'item5': 'weapon_pipe_bomb_spawn',
+    'item11': 'weapon_pain_pills_spawn',  # adrenaline
+    'item13': 'weapon_pipe_bomb_spawn',   # bile
+}
+CANISTERS = {'item6': 'models/props_equipment/oxygentank01.mdl', 'item7': 'models/props_junk/propanecanister001a.mdl',
+             'item8': 'models/props_junk/gascan001a.mdl'}
+DROP = {'weapon_melee_spawn', 'weapon_chainsaw_spawn', 'weapon_grenade_launcher_spawn', 'upgrade_spawn',
+        'weapon_rifle_m60_spawn', 'weapon_upgradepack_incendiary_spawn', 'weapon_upgradepack_explosive_spawn',
+        'weapon_adrenaline_spawn', 'weapon_defibrillator_spawn', 'weapon_vomitjar_spawn', 'weapon_scavenge_item_spawn',
+        'logic_script', 'info_survivor_position_l4d2'}
+RENAME = {'prop_minigun_l4d1': 'prop_minigun', 'weapon_pistol_magnum_spawn': 'weapon_pistol_spawn',
+          'weapon_adrenaline_spawn': 'weapon_pain_pills_spawn', 'weapon_vomitjar_spawn': 'weapon_pipe_bomb_spawn'}
+START_ROOM_RADIUS = 600
+L2_KEYS = {'weapon_selection', 'spawn_without_director', 'melee_weapon', 'glowrange', 'no_cs_weapons'}
+L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge', re.I)
+
+
+def pick(choices, hid):
+    return choices[zlib.crc32(hid.encode()) % len(choices)]
+
+
+def parse_ents(text):
+    return [re.findall(r'"([^"]*)"\s+"([^"]*)"', b) for b in re.findall(r'\{(.*?)\}', text, re.S)]
+
+
+def convert_entity(pairs, log):
+    kv = dict(pairs)
+    cls = kv.get('classname', '')
+    hid = kv.get('hammerid', kv.get('origin', ''))
+    new = cls
+    if cls in DROP:
+        log['dropped ' + cls] += 1
+        return None
+    if cls == 'weapon_spawn':
+        new = pick(SELECTION.get(kv.get('weapon_selection', ''), ['weapon_smg_spawn']), hid)
+    elif cls == 'weapon_item_spawn':
+        on = [k for k, v in kv.items() if re.fullmatch(r'item\d+', k) and v not in ('0', '')]
+        cands = sorted({ITEMS[k] for k in on if k in ITEMS})
+        cans = [CANISTERS[k] for k in on if k in CANISTERS]
+        if cands:
+            new = pick(cands, hid)
+        elif cans:
+            new = 'prop_physics'
+            pairs = [(k, v) for k, v in pairs if k in ('origin', 'angles', 'targetname', 'hammerid')]
+            pairs += [('model', pick(cans, hid)), ('classname', 'prop_physics')]
+            log['weapon_item_spawn -> canister'] += 1
+            return pairs
+        else:
+            log['dropped weapon_item_spawn (no L4D1 item)'] += 1
+            return None
+    elif cls in RENAME:
+        new = RENAME[cls]
+    out = []
+    for k, v in pairs:
+        if k in L2_KEYS or re.fullmatch(r'item\d+', k):
+            continue
+        v = v.replace('\x1b', ',')
+        if L2_OUTPUT_HINT.search(v) and k.lower().startswith('on'):
+            log['stripped script/scavenge output'] += 1
+            continue
+        if k == 'classname':
+            v = new
+        out.append((k, v))
+    if new in W:
+        model, count = W[new]
+        out = [(k, v) for k, v in out if k != 'model'] + [('model', model)]
+        if not any(k == 'count' for k, _ in out):
+            out.append(('count', count))
+    if new != cls:
+        log[f'{cls} -> {new}'] += 1
+    return out
+
+
+def write_ents(ents):
+    s = ''.join('{\n' + ''.join(f'"{k}" "{v}"\n' for k, v in e) + '}\n' for e in ents)
+    return s.encode('latin1') + b'\0'
+
+
+def convert(src, dst, drop_models=()):
+    d = open(src, 'rb').read()
+    assert d[:4] == b'VBSP' and struct.unpack('<i', d[4:8])[0] == 21, 'not a v21 BSP'
+    L = [struct.unpack('<iiii', d[8 + 16 * i:24 + 16 * i]) for i in range(64)]  # ver, ofs, len, cc
+    rev = struct.unpack('<i', d[1032:1036])[0]
+    data = {i: d[o:o + n] for i, (v, o, n, cc) in enumerate(L)}
+    log = collections.Counter()
+
+    ents = [e for e in (convert_entity(p, log) for p in parse_ents(data[0].decode('latin1'))) if e]
+    # L4D1's director culls weapon spawns without "Must Exist" (spawnflag 2); L4D2 start rooms often
+    # leave it off, so the start-room guns vanish. Force it on near the player start.
+    pos = lambda e: [float(x) for x in dict(e).get('origin', '0 0 0').split()]
+    starts = [pos(e) for e in ents if dict(e).get('classname') == 'info_player_start']
+    for i, e in enumerate(ents):
+        kv = dict(e)
+        if kv.get('classname') in W and starts and min(math.dist(pos(e), s) for s in starts) < START_ROOM_RADIUS:
+            flags = int(kv.get('spawnflags', '0')) | 2
+            if str(flags) != kv.get('spawnflags'):
+                ents[i] = [(k, v) for k, v in e if k != 'spawnflags'] + [('spawnflags', str(flags))]
+                log['start-room spawn set Must Exist'] += 1
+    data[0] = write_ents(ents)
+
+    # game lump: rewrite sprp v9 -> v8; offsets are absolute and fixed up after layout
+    g = data[35]
+    n = struct.unpack('<i', g[:4])[0]
+    heads = [list(struct.unpack('<iHHii', g[4 + 16 * i:20 + 16 * i])) for i in range(n)]
+    bodies = []
+    for h in heads:
+        body = d[h[3]:h[3] + h[4]]
+        if h[0] == int.from_bytes(b'sprp', 'big') and h[2] == 9:
+            nd = struct.unpack('<i', body[:4])[0]
+            p = 4 + 128 * nd
+            nl = struct.unpack('<i', body[p:p + 4])[0]
+            p += 4 + 2 * nl
+            npr = struct.unpack('<i', body[p:p + 4])[0]
+            p += 4
+            assert len(body) - p == 72 * npr, 'unexpected sprp v9 size'
+            names = [body[4 + 128 * i:132 + 128 * i] for i in range(nd)]
+            keep = [i for i, nm in enumerate(names)
+                    if not nm.split(b'\0')[0].decode('latin1').lower().startswith(tuple(drop_models))]
+            remap = {old: new for new, old in enumerate(keep)}
+            recs = []
+            for i in range(npr):
+                rec = bytearray(body[p + 72 * i:p + 72 * i + 68])
+                ptype = struct.unpack_from('<H', rec, 24)[0]
+                if ptype not in remap:
+                    log[f'dropped static prop {names[ptype].split(b"\0")[0].decode()}'] += 1
+                    continue
+                struct.pack_into('<H', rec, 24, remap[ptype])
+                recs.append(bytes(rec))
+            leaves = body[4 + 128 * nd:4 + 128 * nd + 4 + 2 * nl]
+            body = (struct.pack('<i', len(keep)) + b''.join(names[i] for i in keep) + leaves
+                    + struct.pack('<i', len(recs)) + b''.join(recs))
+            h[2] = 8
+            log[f'static props v9->v8 ({npr})'] += 1
+        bodies.append(body)
+
+    # layout: header then lumps in original file order, 4-byte aligned
+    order = sorted(range(64), key=lambda i: L[i][1])
+    out = bytearray(1036)
+    newL = {}
+    for i in order:
+        while len(out) % 4:
+            out += b'\0'
+        if i == 35:
+            base = len(out) + 4 + 16 * n
+            hdr = struct.pack('<i', n)
+            pos = base
+            for h, b in zip(heads, bodies):
+                hdr += struct.pack('<iHHii', h[0], h[1], h[2], pos, len(b))
+                pos += len(b)
+            blob = hdr + b''.join(bodies)
+        else:
+            blob = data[i]
+        newL[i] = (len(out), len(blob)) if blob else (0, 0)
+        out += blob
+    out[0:8] = b'VBSP' + struct.pack('<i', 20)
+    for i in range(64):
+        o, ln = newL[i]
+        out[8 + 16 * i:24 + 16 * i] = struct.pack('<iiii', o, ln, L[i][0], L[i][3])
+    out[1032:1036] = struct.pack('<i', rev)
+    open(dst, 'wb').write(out)
+    return log
+
+
+if __name__ == '__main__':
+    for log_line in sorted(convert(sys.argv[1], sys.argv[2], tuple(sys.argv[3:])).items()):
+        print(f'  {log_line[1]:4d}  {log_line[0]}')

@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+"""Convert an L4D2 custom campaign into an L4D1 addon VPK.
+
+    ./convert.py path/to/campaign.zip|.vpk [--name NAME] [--drop-models PREFIX ...]
+
+Writes out/<name>/report.txt and out/<name>/<name>_l4d1.vpk. Read the report before playing:
+it lists VScript use, entities with no L4D1 equivalent and assets that could not be found.
+See README.md for what each step does and why.
+"""
+import argparse, collections, glob, io, os, pickle, re, shutil, struct, subprocess, sys, zipfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import vpkread
+from bspinfo import lumps, ents, texdata, staticprops, pak
+import l4d2to1, nav2to1
+
+STEAM = os.path.expanduser('~/.local/share/Steam/steamapps/common')
+L4D1 = f'{STEAM}/left 4 dead'
+L4D2 = f'{STEAM}/Left 4 Dead 2'
+L4D1_SERVER_SO = '/home/volence/l4d1-ds/server/left4dead/bin/server.so'
+# L4D2 models that crash the L4D1 client (studiorender.dll access violation, 2026-10-08, CCR map 1).
+DEFAULT_DROP = ('models/deadbodies/',)
+VENV = os.path.join(HERE, '.venv')
+
+
+def vpk_index(path):
+    f, base, es = vpkread.entries(path)
+    return {p.lower(): (path, base, arc, off, ln, pre) for p, arc, off, ln, pre in es}
+
+
+def vpk_read(entry):
+    path, base, arc, off, ln, pre = entry
+    if arc == 0x7fff:
+        f = open(path, 'rb'); f.seek(base + off)
+    else:
+        f = open(path.replace('_dir.vpk', '_%03d.vpk' % arc), 'rb'); f.seek(off)
+    return pre + f.read(ln)
+
+
+def indexes(cache):
+    """Files L4D1 players already have (base game + our zz_l4d2maps pack), and the L4D2 install."""
+    if os.path.exists(cache):
+        return pickle.load(open(cache, 'rb'))
+    have = set()
+    for p in [f'{L4D1}/left4dead/pak01_dir.vpk', f'{L4D1}/left4dead_dlc3/pak01_dir.vpk',
+              f'{L4D1}/hl2/hl2_misc_dir.vpk', f'{L4D1}/hl2/hl2_textures_dir.vpk',
+              *glob.glob(f'{L4D1}/left4dead/addons/zz_l4d2maps_*.vpk')]:
+        if os.path.exists(p):
+            have |= set(vpk_index(p))
+    l2 = {}
+    for p in sorted(glob.glob(f'{L4D2}/*/pak01_dir.vpk')):
+        l2.update(vpk_index(p))
+    os.makedirs(os.path.dirname(cache), exist_ok=True)
+    pickle.dump((have, l2), open(cache, 'wb'))
+    return have, l2
+
+
+def extract(src, dest):
+    """Unpack the campaign (zip containing VPKs, a bare VPK, or loose files) into dest."""
+    vpks = []
+    if src.endswith('.zip'):
+        with zipfile.ZipFile(src) as z:
+            z.extractall(dest + '/_zip')
+        vpks = glob.glob(dest + '/_zip/**/*.vpk', recursive=True)
+    elif src.endswith('.vpk'):
+        vpks = [src]
+    for v in vpks:
+        idx = vpk_index(v)
+        for name, e in idx.items():
+            out = os.path.join(dest, name)
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            open(out, 'wb').write(vpk_read(e))
+    shutil.rmtree(dest + '/_zip', ignore_errors=True)
+
+
+def l4d1_classes():
+    """Entity classes L4D1 knows: strings in server.so plus every class used by a stock map."""
+    out = subprocess.run(['strings', L4D1_SERVER_SO], capture_output=True, text=True).stdout
+    known = set(re.findall(r'^[a-z_0-9]+$', out, re.M))
+    for b in glob.glob(os.path.dirname(os.path.dirname(L4D1_SERVER_SO)) + '/maps/l4d_*.bsp'):
+        d = open(b, 'rb').read()
+        known |= {kv.get('classname') for kv, _ in ents(d, lumps(d)[1])}
+    return known
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('src')
+    ap.add_argument('--name', help='output name (default: input file stem)')
+    ap.add_argument('--drop-models', nargs='*', default=list(DEFAULT_DROP),
+                    help=f'static prop model prefixes to remove (default: {" ".join(DEFAULT_DROP)})')
+    a = ap.parse_args()
+    name = a.name or re.sub(r'[^a-z0-9_]+', '_', os.path.basename(a.src).rsplit('.', 1)[0].lower())
+    work = os.path.join(HERE, 'out', name)
+    src_dir, pkg = os.path.join(work, 'src'), os.path.join(work, 'pkg')
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(pkg)
+    extract(os.path.abspath(a.src), src_dir)
+    have, l2 = indexes(os.path.join(HERE, 'out', '.index.pkl'))
+    prefixes = tuple(a.drop_models)
+    rep = []
+    say = lambda s='': (rep.append(s), print(s))
+
+    known = l4d1_classes() if os.path.exists(L4D1_SERVER_SO) else None
+    handled = set(l4d2to1.DROP) | set(l4d2to1.RENAME) | {'weapon_spawn', 'weapon_item_spawn'}
+    bsps = sorted(glob.glob(src_dir + '/maps/*.bsp'))
+    if not bsps:
+        sys.exit('no maps/*.bsp in the input')
+
+    # ---- analysis ------------------------------------------------------------------------------
+    say(f'== {name}: {len(bsps)} maps')
+    vs = [p for p in glob.glob(src_dir + '/scripts/vscripts/**/*', recursive=True) if os.path.isfile(p)]
+    if vs:
+        say(f'!! {len(vs)} VScript files shipped (L4D1 has no VScript; their behaviour is LOST):')
+        for p in vs:
+            say('   ' + os.path.relpath(p, src_dir))
+    need, drop = set(), set()
+    for b in bsps:
+        d = open(b, 'rb').read(); ver, L = lumps(d)
+        m = os.path.basename(b)[:-4]
+        E = ents(d, L)
+        pk = {p.lower() for p in pak(d, L)}
+        script = [(kv.get('classname'), k, v[:80]) for kv, pairs in E for k, v in pairs
+                  if k.lower() in ('vscripts', 'thinkfunction', 'scriptfile') and v
+                  or re.search(r'runscript|callscriptfunction', v, re.I)]
+        unknown = collections.Counter(kv.get('classname') for kv, _ in E
+                                      if known and kv.get('classname') not in known
+                                      and kv.get('classname') not in handled)
+        say(f'-- {m}: BSP v{ver}, {len(E)} entities')
+        if any(kv.get('classname') == 'trigger_finale' for kv, _ in E):
+            say('   has trigger_finale (check it is not a scripted L4D2 finale)')
+        for c, k, v in script:
+            say(f'   !! script hook: {c} {k} = {v}  (stripped)')
+        for c, n in unknown.items():
+            say(f'   !! {n}x {c}: not an L4D1 entity, the engine will ignore it')
+        for t in texdata(d, L):
+            v = f'materials/{t}.vmt'
+            if v not in have and v not in pk:
+                need.add(v)
+        for p in staticprops(d, L)[1] + [kv.get('model', '').lower() for kv, _ in E]:
+            if p.endswith('.mdl') and p not in have and p not in pk:
+                if p.startswith(prefixes):
+                    drop.add(p)  # only models players lack; stock L4D1/pack copies are safe
+                else:
+                    need.add(p)
+
+    # ---- assets: pull anything players lack from the L4D2 install ----------------------------
+    missing, copied, todo, seen = [], 0, sorted(need), set()
+    while todo:
+        f = todo.pop()
+        if f in seen or f in have:
+            continue
+        seen.add(f)
+        if os.path.exists(os.path.join(src_dir, f)):
+            continue  # the campaign ships it
+        if f not in l2:
+            missing.append(f); continue
+        data = vpk_read(l2[f])
+        files = {f: data}
+        if f.endswith('.mdl'):
+            stem = f[:-4]
+            files.update({k: vpk_read(e) for k, e in l2.items() if k.startswith(stem + '.')})
+            ntex, tidx, ncd, cdidx = struct.unpack_from('<iiii', data, 204)
+            texs = [data[tidx + 64 * i + struct.unpack_from('<i', data, tidx + 64 * i)[0]:].split(b'\0')[0]
+                    for i in range(ntex)]
+            cds = [data[struct.unpack_from('<i', data, cdidx + 4 * i)[0]:].split(b'\0')[0] for i in range(ncd)]
+            for t in texs:
+                for cd in cds:
+                    v = ('materials/' + (cd.decode().strip('/\\') + '/' if cd.strip(b'/\\') else '')
+                         + t.decode() + '.vmt').lower().replace('\\', '/')
+                    if v in l2 or v in have:
+                        todo.append(v); break
+        elif f.endswith('.vmt'):
+            for k, val in re.findall(r'"?(\$\w+|include)"?\s+"?([^"\s]+)"?', data.decode('latin1')):
+                val = val.lower().replace('\\', '/')
+                if k == 'include':
+                    todo.append(val)
+                elif '/' in val and not val.startswith('['):
+                    todo.append('materials/' + val + ('' if val.endswith('.vtf') else '.vtf'))
+        for k, b in files.items():
+            if k in have:
+                continue
+            out = os.path.join(pkg, k); os.makedirs(os.path.dirname(out), exist_ok=True)
+            open(out, 'wb').write(b); copied += 1
+    say(f'== assets: {copied} files pulled from L4D2, {len(missing)} not found anywhere')
+    for f in missing:
+        say('   !! missing: ' + f)
+
+    # ---- campaign's own files (minus Hammer leftovers) -------------------------------------------
+    skip = re.compile(r'\.(vmf|vmx|log|prt|lin|jpg|bak)$|^maps/.*\.(vtf|bmp)$|^scripts/vscripts/', re.I)
+    for root, _, fs in os.walk(src_dir):
+        for fn in fs:
+            rel = os.path.relpath(os.path.join(root, fn), src_dir).replace('\\', '/').lower()
+            if skip.search(rel) or rel.startswith('maps/') or not '/' in rel:
+                continue
+            out = os.path.join(pkg, rel); os.makedirs(os.path.dirname(out), exist_ok=True)
+            shutil.copy(os.path.join(root, fn), out)
+
+    # ---- maps and navs ---------------------------------------------------------------------------
+    os.makedirs(pkg + '/maps', exist_ok=True)
+    for b in bsps:
+        m = os.path.basename(b)[:-4].lower()
+        log = l4d2to1.convert(b, f'{pkg}/maps/{m}.bsp', tuple(drop))
+        say(f'-- converted {m}:')
+        for k, n in sorted(log.items()):
+            say(f'   {n:5d}  {k}')
+        nav = b[:-4] + '.nav'
+        if os.path.exists(nav):
+            n, v = nav2to1.convert(nav, f'{pkg}/maps/{m}.nav')
+            say(f'   nav: {n} areas, {v} visibility entries remapped')
+        else:
+            say('   !! no .nav shipped: the map is unplayable in versus without one')
+
+    # ---- mission files: lower-case map names to match the lower-cased BSPs ----------------------
+    for mf in glob.glob(pkg + '/missions/*.txt'):
+        t = open(mf, encoding='latin1').read()
+        t = re.sub(r'("Map"\s+")([^"]+)"', lambda mm: mm.group(1) + mm.group(2).lower() + '"', t, flags=re.I)
+        open(mf, 'w', encoding='latin1').write(t)
+        say(f'== mission {os.path.basename(mf)}: map names lower-cased')
+
+    # ---- pack (L4D1 only reads VPK v1) ---------------------------------------------------------
+    if not os.path.exists(VENV):
+        subprocess.run([sys.executable, '-m', 'venv', VENV], check=True)
+        subprocess.run([VENV + '/bin/pip', '-q', 'install', 'vpk'], check=True)
+    out = os.path.join(work, f'{name}_l4d1.vpk')
+    subprocess.run([VENV + '/bin/python', '-c',
+                    'import sys, vpk; p = vpk.new(sys.argv[1]); p.version = 1; p.save(sys.argv[2])', pkg, out],
+                   check=True, cwd='/tmp')
+    say(f'== wrote {out} ({os.path.getsize(out) // 2**20} MB)')
+    open(os.path.join(work, 'report.txt'), 'w').write('\n'.join(rep) + '\n')
+
+
+if __name__ == '__main__':
+    main()
