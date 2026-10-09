@@ -1,3 +1,5 @@
 out/
 .venv/
 __pycache__/
+flowdump/include/
+flowdump/spcomp.exe

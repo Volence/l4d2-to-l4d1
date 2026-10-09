@@ -1,15 +1,20 @@
 # l4d2to1: convert L4D2 custom campaigns to L4D1
 
 ```
-./convert.py ~/Downloads/some_campaign.zip [--name short_name]
+./convert.py ~/Downloads/some_campaign.zip --name short_name   # VPK, report, Rotoblin starter files
+./flowdump.sh short_name                                        # the game's real flow for every map
+./rotoblin.py out/short_name/pkg                                # regenerate Rotoblin files from it
 ```
 
-This produces `out/<name>/<name>_l4d1.vpk`, an addon VPK (v1, the only version L4D1 reads), and
+Then read `out/<name>/report.txt`, edit `out/<name>/rotoblin/`, play every map, and integrate
+(see "Rotoblin integration" below).
+
+The first step produces `out/<name>/<name>_l4d1.vpk`, an addon VPK (v1, the only version L4D1 reads), and
 `out/<name>/report.txt`. **Read the report first.** Every line marked `!!` is something the converter
 could not carry over. The input can be the gamemaps zip, a bare `.vpk`, or a zip holding several VPKs.
 
-Needs the L4D1 client install (to know what players already have, including our `zz_l4d2maps_*`
-pack), the L4D2 install (to pull missing assets from) and `/home/volence/l4d1-ds` (to learn which entity
+Needs the L4D1 client install (to know what players already have, including our `l4d2maps_*`
+pack, whatever its `zz_`/`00_` prefix), the L4D2 install (to pull missing assets from) and `/home/volence/l4d1-ds` (to learn which entity
 classes L4D1 knows). Paths are at the top of `convert.py`. The first run builds `out/.index.pkl`;
 delete it after installing new packs.
 
@@ -77,9 +82,65 @@ the map pulled in.
 3. Then the competitive side: Rotoblin stripper config, boss flow and the pug campaign pool
    (a campaign pools only if it is installed on every enabled server).
 
+## Mission file
+
+Besides lower-casing map names, `convert.py` rewrites L4D2 scoring into L4D1's: `VersusCompletionScore`
+becomes a per-map `"VersusModifier"` (400 points = 1.0; stock L4D1 runs 1.0 to 1.75), and boss chances
+written as percentages ("75") become fractions (0.75).
+
+## Rotoblin integration
+
+Harry (Rotoblin-AZMod) never edits a map file. Each supported map gets a stripper config
+(`addons/stripper/Roto-AZMod/maps/<map>.cfg`: infected ladders, cover props, clips, item and ammo
+changes, event fixes) and a block in `data/mapinfo.txt` (`VersusModifier`, `pill_limit`, boss ban
+windows, behaviour flags). Some campaigns also get menu entries and the odd hardcoded fix in plugin code.
+We override both files from `deploy/overrides/`.
+
+`rotoblin.py` (run by `convert.py`) writes starters for both into `out/<name>/rotoblin/`:
+
+- `mapinfo.txt`: one block per map. `VersusModifier` comes from the mission. `versus_boss_flow_max` is
+  90 minus the boss buffer (2200 units as a % of the map), our door-camp rule from match 363 (drainage).
+  Each panic event (button, trigger or relay telling the director to panic), elevator and moving
+  platform gets a tank ban from 5% before to 15% after it. The author's L4D2 "no bosses" Director
+  Scripts come out as commented-out windows. CCR's were Valve's stock Crash Course ones and would have
+  banned the tank from nearly every map, so they are off unless you remove the `//`.
+- `stripper/<map>.cfg`: Harry's section layout, a header listing start, end, events, car alarms and
+  no-boss stretches with flow %, and an ammo pile on the start-room floor beside the guns when the
+  author left none. Verified on CCR: the configs load, and maps 1 and 4 gain exactly that one pile.
+- `flow.txt`: the same facts per map in one place.
+
+**Flow numbers must be the game's.** `flowdump.sh` boots the isolated test server, loads each map and runs
+the `flowdump` plugin (`flowdump/flowdump.sp`, left4dhooks: every nav area's flow plus the map's max flow)
+into `out/<name>/flowdump/`, which `convert.py` keeps across rebuilds. Without a dump the generator falls
+back to a nav shortest-walk ESTIMATE and labels every number with it; that estimate came out at 0.4 to
+1.0x of the real length on stock maps (ladders, lifts and infected-only shortcuts), so do not ship it.
+An empty server gets most maps right (Greenhouse 10362 vs 10362 measured live, Offices 21636 vs 21818)
+but not all (Terminal 18534 vs 23851, hospital04 0), so confirm each map once in a live round: the
+realflow boss fork logs `[realflow] ... maxflow`.
+
+**To ship a campaign** (none of this is automatic, and live servers change only when the owner says so):
+1. Upload the VPK through the site's custom campaign uploader so it lands on every pool server.
+2. Paste the edited `mapinfo.txt` blocks into `deploy/overrides/left4dead/addons/sourcemod/data/mapinfo.txt`
+   and copy the stripper configs into `deploy/overrides/left4dead/addons/stripper/Roto-AZMod/maps/`.
+3. Deploy the overrides with the usual empty-server rules (`deploy/README.md`).
+
+## Test server
+
+`make-test-server.sh` builds `/home/volence/l4d1-ccrtest`: a hard-link copy of the shared local server
+(no disk cost) with only left4dhooks and flowdump loaded, so nothing talks to the live PUG site.
+Hard links share contents, so it never writes into a linked file. Configs are edited with sed (a new
+file), and `logs/` and the flowdump output are directories of its own. (The first run appended to the
+shared server's SourceMod error log through a linked `logs/` file; the script now replaces that dir.)
+An empty L4D1 server hibernates and stops running timers, so scripts drive it over rcon (`rcon.py`).
+
 ## Files
 
 - `convert.py`: the pipeline (extract, analyse, pull assets, convert maps and navs, fix missions, pack)
 - `l4d2to1.py`: BSP and entity conversion; runs standalone as `l4d2to1.py in.bsp out.bsp [drop-prefix...]`
 - `nav2to1.py`: nav conversion; runs standalone as `nav2to1.py in.nav out.nav`
+- `rotoblin.py`: Rotoblin starter files (mapinfo blocks, stripper configs, flow summary)
+- `flowdump.sh`, `flowdump/flowdump.sp`: dump the game's nav flow per map (`.smx` built with the Rotoblin
+  spcomp under wine: copy `practice/build/{spcomp.exe,include}` into `flowdump/`, then
+  `wine ./spcomp.exe flowdump.sp -o flowdump.smx -iinclude`)
+- `make-test-server.sh`, `rcon.py`: the isolated test server and a minimal rcon client
 - `bspinfo.py`, `nav.py`, `vpkread.py`: readers

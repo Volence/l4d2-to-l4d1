@@ -7,13 +7,13 @@ Writes out/<name>/report.txt and out/<name>/<name>_l4d1.vpk. Read the report bef
 it lists VScript use, entities with no L4D1 equivalent and assets that could not be found.
 See README.md for what each step does and why.
 """
-import argparse, collections, glob, io, os, pickle, re, shutil, struct, subprocess, sys, zipfile
+import argparse, collections, glob, io, json, os, pickle, re, shutil, struct, subprocess, sys, zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import vpkread
 from bspinfo import lumps, ents, texdata, staticprops, pak
-import l4d2to1, nav2to1
+import l4d2to1, nav2to1, rotoblin
 
 STEAM = os.path.expanduser('~/.local/share/Steam/steamapps/common')
 L4D1 = f'{STEAM}/left 4 dead'
@@ -45,7 +45,7 @@ def indexes(cache):
     have = set()
     for p in [f'{L4D1}/left4dead/pak01_dir.vpk', f'{L4D1}/left4dead_dlc3/pak01_dir.vpk',
               f'{L4D1}/hl2/hl2_misc_dir.vpk', f'{L4D1}/hl2/hl2_textures_dir.vpk',
-              *glob.glob(f'{L4D1}/left4dead/addons/zz_l4d2maps_*.vpk')]:
+              *glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk')]:
         if os.path.exists(p):
             have |= set(vpk_index(p))
     l2 = {}
@@ -94,7 +94,9 @@ def main():
     name = a.name or re.sub(r'[^a-z0-9_]+', '_', os.path.basename(a.src).rsplit('.', 1)[0].lower())
     work = os.path.join(HERE, 'out', name)
     src_dir, pkg = os.path.join(work, 'src'), os.path.join(work, 'pkg')
-    shutil.rmtree(work, ignore_errors=True)
+    # keep flow dumps (flowdump.sh output) across rebuilds; rerun flowdump.sh if the maps changed
+    for sub in ('src', 'pkg', 'rotoblin'):
+        shutil.rmtree(os.path.join(work, sub), ignore_errors=True)
     os.makedirs(pkg)
     extract(os.path.abspath(a.src), src_dir)
     have, l2 = indexes(os.path.join(HERE, 'out', '.index.pkl'))
@@ -115,7 +117,7 @@ def main():
         say(f'!! {len(vs)} VScript files shipped (L4D1 has no VScript; their behaviour is LOST):')
         for p in vs:
             say('   ' + os.path.relpath(p, src_dir))
-    need, drop = set(), set()
+    need, drop, director_scripts = set(), set(), {}
     for b in bsps:
         d = open(b, 'rb').read(); ver, L = lumps(d)
         m = os.path.basename(b)[:-4]
@@ -123,7 +125,18 @@ def main():
         pk = {p.lower() for p in pak(d, L)}
         script = [(kv.get('classname'), k, v[:80]) for kv, pairs in E for k, v in pairs
                   if k.lower() in ('vscripts', 'thinkfunction', 'scriptfile') and v
-                  or re.search(r'runscript|callscriptfunction', v, re.I)]
+                  or re.search(r'runscript|callscriptfunction|beginscript|endscript', v, re.I)]
+        # Director Scripts ("BeginScript c9m2_nobosses") are lost in L4D1; keep where they fire so
+        # rotoblin.py can turn no-boss stretches into mapinfo ban windows.
+        brushes = rotoblin.brush_centers(d, L)
+        for kv, pairs in E:
+            for k, v in pairs:
+                parts = re.split(r'[,\x1b]', v)
+                if k.lower().startswith('on') and len(parts) > 2 and parts[1].lower() in ('beginscript', 'endscript'):
+                    p = rotoblin.position(kv, brushes)
+                    if p:
+                        director_scripts.setdefault(m.lower(), []).append(
+                            (parts[1].lower()[:-6], parts[2], kv.get('targetname') or kv.get('classname'), p))
         unknown = collections.Counter(kv.get('classname') for kv, _ in E
                                       if known and kv.get('classname') not in known
                                       and kv.get('classname') not in handled)
@@ -212,12 +225,25 @@ def main():
         else:
             say('   !! no .nav shipped: the map is unplayable in versus without one')
 
-    # ---- mission files: lower-case map names to match the lower-cased BSPs ----------------------
+    # ---- mission files ---------------------------------------------------------------------------
+    # Map names lower-cased to match the BSPs. L4D1 scores with a per-map "VersusModifier" (stock 1.0,
+    # Dead Center finale 1.75) where L4D2 uses "VersusCompletionScore"; 400 points = 1.0. L4D1 boss
+    # chances are fractions, L4D2 customs often write percentages ("75").
     for mf in glob.glob(pkg + '/missions/*.txt'):
         t = open(mf, encoding='latin1').read()
         t = re.sub(r'("Map"\s+")([^"]+)"', lambda mm: mm.group(1) + mm.group(2).lower() + '"', t, flags=re.I)
+        n_mod = 0
+        if not re.search(r'"VersusModifier"', t, re.I):
+            def modifier(mm):
+                nonlocal n_mod; n_mod += 1
+                return f'{mm.group(1)}"VersusModifier"\t"{round(int(mm.group(2)) / 400, 2):g}"'
+            t = re.sub(r'(\s*)"VersusCompletionScore"\s+"(\d+)"', modifier, t, flags=re.I)
+        t = re.sub(r'("(?:tank|witch)_chance"\s+")(\d+(?:\.\d+)?)"',
+                   lambda mm: mm.group(1) + (f'{float(mm.group(2)) / 100:g}' if float(mm.group(2)) > 1
+                                             else mm.group(2)) + '"', t, flags=re.I)
         open(mf, 'w', encoding='latin1').write(t)
-        say(f'== mission {os.path.basename(mf)}: map names lower-cased')
+        say(f'== mission {os.path.basename(mf)}: map names lower-cased, {n_mod} VersusModifier from '
+            f'VersusCompletionScore, boss chances as fractions')
 
     # ---- pack (L4D1 only reads VPK v1) ---------------------------------------------------------
     if not os.path.exists(VENV):
@@ -228,6 +254,8 @@ def main():
                     'import sys, vpk; p = vpk.new(sys.argv[1]); p.version = 1; p.save(sys.argv[2])', pkg, out],
                    check=True, cwd='/tmp')
     say(f'== wrote {out} ({os.path.getsize(out) // 2**20} MB)')
+    json.dump(director_scripts, open(os.path.join(work, 'director_scripts.json'), 'w'), indent=1)
+    say(f'== Rotoblin starter files: {rotoblin.main(pkg)} (see README "Rotoblin integration")')
     open(os.path.join(work, 'report.txt'), 'w').write('\n'.join(rep) + '\n')
 
 

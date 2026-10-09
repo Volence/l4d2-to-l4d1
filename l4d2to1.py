@@ -44,7 +44,7 @@ RENAME = {'prop_minigun_l4d1': 'prop_minigun', 'weapon_pistol_magnum_spawn': 'we
           'weapon_adrenaline_spawn': 'weapon_pain_pills_spawn', 'weapon_vomitjar_spawn': 'weapon_pipe_bomb_spawn'}
 START_ROOM_RADIUS = 600
 L2_KEYS = {'weapon_selection', 'spawn_without_director', 'melee_weapon', 'glowrange', 'no_cs_weapons'}
-L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge', re.I)
+L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge|beginscript|endscript', re.I)
 
 
 def pick(choices, hid):
