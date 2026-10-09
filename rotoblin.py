@@ -25,6 +25,8 @@ import nav
 
 BOSS_BUFFER = 2200          # versus_boss_buffer: the engine spawns the tank this far before the stored flow
 LATEST_TANK = 90            # Riverside rule: latest tank trigger at 90% of the map (match 363 door camp)
+GLOBAL_BOSS_MAX = 80        # versus_boss_flow_max in deploy local_4v4.cfg; our boss fork forces a tank and
+                            # witch on EVERY map between 10% and this, so a map only needs a cap if stricter
 START_ROOM = 600            # units from info_player_start that count as the start saferoom
 BAN_BEFORE, BAN_AFTER = 5, 15  # default window around an event, in flow %
 PANIC = re.compile(r'(force|scripted)?panicevent', re.I)
@@ -203,13 +205,16 @@ def mapinfo_block(m, a, modifier):
     buf = 100 * BOSS_BUFFER / a['maxflow']
     lines = [f'\t"{m}"', '\t{',
              '\t\t"pill_limit"\t\t"2"',
-             f'\t\t"VersusModifier"\t\t"{modifier}" // from the mission\'s VersusCompletionScore / 400',
-             f'\t\t"versus_boss_flow_max"\t"{math.floor(LATEST_TANK - buf)}" // {LATEST_TANK} minus boss buffer '
-             f'{buf:.1f}% (max flow {a["maxflow"]:.0f}, {a["source"]}); keeps the tank off the saferoom door']
+             f'\t\t"VersusModifier"\t\t"{modifier}" // from the mission\'s VersusCompletionScore / 400']
+    cap = math.floor(LATEST_TANK - buf)
+    if cap < GLOBAL_BOSS_MAX:  # short map: the global cap would let the tank reach the saferoom door
+        lines.append(f'\t\t"versus_boss_flow_max"\t"{cap}" // {LATEST_TANK} minus boss buffer {buf:.1f}% '
+                     f'(max flow {a["maxflow"]:.0f}, {a["source"]}); keeps the tank off the saferoom door')
     bans = [(f'{kind} {label}', max(0, round(f - BAN_BEFORE)), min(100, round(f + BAN_AFTER)),
              f'event starts ~{f}% ({a["source"]})') for f, kind, label, p in a['events'] if kind != 'Finale']
-    # The author's no-boss Director Scripts are often Valve's stock ones (c9m1_nobosses) and can cover
-    # most of a map, so they are written commented out: remove the // to enable a window.
+    # The author's no-boss Director Scripts never apply on our servers (the boss fork forces bosses on
+    # every map, and L4D1 has no VScript anyway). They are written commented out as a hint of where the
+    # author did not want a tank; remove the // only if you agree.
     noboss = [(f'No bosses ({name})', math.floor(f), math.ceil(g),
                f"author's Director Script, trigger {label}", True) for f, g, name, label in a['noboss']]
     bans = [b + (False,) for b in bans]

@@ -98,12 +98,14 @@ We override both files from `deploy/overrides/`.
 
 `rotoblin.py` (run by `convert.py`) writes starters for both into `out/<name>/rotoblin/`:
 
-- `mapinfo.txt`: one block per map. `VersusModifier` comes from the mission. `versus_boss_flow_max` is
-  90 minus the boss buffer (2200 units as a % of the map), our door-camp rule from match 363 (drainage).
-  Each panic event (button, trigger or relay telling the director to panic), elevator and moving
-  platform gets a tank ban from 5% before to 15% after it. The author's L4D2 "no bosses" Director
-  Scripts come out as commented-out windows. CCR's were Valve's stock Crash Course ones and would have
-  banned the tank from nearly every map, so they are off unless you remove the `//`.
+- `mapinfo.txt`: one block per map. **Bosses need no setup:** our `l4d_versus_same_UnprohibitBosses`
+  fork forces a tank and a witch on every map, rolled between 10% and 80% true flow (`local_4v4.cfg`)
+  and never past 99% minus the boss buffer, whatever the mission says. So a block carries only what the
+  defaults get wrong: `VersusModifier` (scoring) from the mission; a tank ban from 5% before to 15%
+  after each panic event, elevator and moving platform; and `versus_boss_flow_max` only on short maps,
+  where 90 minus the boss buffer (2200 units as a % of the map, our match 363 door-camp rule) is under
+  the global 80. The author's L4D2 "no bosses" Director Scripts never apply here (the fork overrides
+  them, and L4D1 has no VScript), so they appear commented out as a hint only.
 - `stripper/<map>.cfg`: Harry's section layout, a header listing start, end, events, car alarms and
   no-boss stretches with flow %, and an ammo pile on the start-room floor beside the guns when the
   author left none. Verified on CCR: the configs load, and maps 1 and 4 gain exactly that one pile.
