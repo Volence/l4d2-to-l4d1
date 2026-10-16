@@ -12,7 +12,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-public Plugin myinfo = { name = "flowdump", author = "Riverside", description = "Dump nav area flow", version = "1.0", url = "" };
+public Plugin myinfo = { name = "flowdump", author = "Malevolence", description = "Dump nav area flow", version = "1.0", url = "" };
 
 ConVar g_cvMaps, g_cvDelay;
 
