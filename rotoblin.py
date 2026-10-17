@@ -141,6 +141,9 @@ def analyse(bsp, navfile, flowfile=None, scripts=()):
         source = 'NAV ESTIMATE' + (' (flowdump read max flow 0: measure in a live round)' if game else '')
         dist = flow_map(areas, ladders, start, end)
         maxflow = nearest_reached(areas, dist, end)[1] if end else max(dist.values())
+        if maxflow <= 0:  # the end sits beside the start or off the walkable graph (x1m6_aftermath): use the farthest area
+            source += ', end not reached, farthest area used'
+            maxflow = max(dist.values())
     pct = lambda p: round(100 * nearest_reached(areas, dist, p)[1] / maxflow, 1)
 
     events = []

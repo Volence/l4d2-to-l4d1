@@ -60,8 +60,11 @@ def extract(src, dest):
     """Unpack the campaign (zip containing VPKs, a bare VPK, or loose files) into dest."""
     vpks = []
     if src.endswith('.zip'):
-        with zipfile.ZipFile(src) as z:
-            z.extractall(dest + '/_zip')
+        try:
+            with zipfile.ZipFile(src) as z:
+                z.extractall(dest + '/_zip')
+        except NotImplementedError:  # Deflate64 and friends (the sirplease.net zips): Python can't, 7z can
+            subprocess.run(['7z', 'x', '-y', '-o' + dest + '/_zip', src], check=True, stdout=subprocess.DEVNULL)
         vpks = glob.glob(dest + '/_zip/**/*.vpk', recursive=True)
     elif src.endswith('.vpk'):
         vpks = [src]
@@ -78,6 +81,9 @@ def l4d1_classes():
     """Entity classes L4D1 knows: strings in server.so plus every class used by a stock map."""
     out = subprocess.run(['strings', L4D1_SERVER_SO], capture_output=True, text=True).stdout
     known = set(re.findall(r'^[a-z_0-9]+$', out, re.M))
+    # LINK_ENTITY_TO_CLASS leaves a static named after the class (_ZL24prop_physics_multiplayer); the bare
+    # string can be glued to a neighbour ("Dprop_physics_multiplayer") and missed by the line match above
+    known |= {m[1][:int(m[0])] for m in re.findall(r'_ZL(\d+)([a-z_0-9]+)', out)}
     for b in glob.glob(os.path.dirname(os.path.dirname(L4D1_SERVER_SO)) + '/maps/l4d_*.bsp'):
         d = open(b, 'rb').read()
         known |= {kv.get('classname') for kv, _ in ents(d, lumps(d)[1])}
@@ -105,7 +111,7 @@ def main():
     say = lambda s='': (rep.append(s), print(s))
 
     known = l4d1_classes() if os.path.exists(L4D1_SERVER_SO) else None
-    handled = set(l4d2to1.DROP) | set(l4d2to1.RENAME) | {'weapon_spawn', 'weapon_item_spawn'}
+    handled = set(l4d2to1.DROP) | set(l4d2to1.RENAME) | {'weapon_spawn', 'weapon_item_spawn', 'weapon_gascan_spawn'}
     bsps = sorted(glob.glob(src_dir + '/maps/*.bsp'))
     if not bsps:
         sys.exit('no maps/*.bsp in the input')

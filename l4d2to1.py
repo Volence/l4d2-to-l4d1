@@ -41,7 +41,13 @@ DROP = {'weapon_melee_spawn', 'weapon_chainsaw_spawn', 'weapon_grenade_launcher_
         'weapon_adrenaline_spawn', 'weapon_defibrillator_spawn', 'weapon_vomitjar_spawn', 'weapon_scavenge_item_spawn',
         'logic_script', 'info_survivor_position_l4d2'}
 RENAME = {'prop_minigun_l4d1': 'prop_minigun', 'weapon_pistol_magnum_spawn': 'weapon_pistol_spawn',
-          'weapon_adrenaline_spawn': 'weapon_pain_pills_spawn', 'weapon_vomitjar_spawn': 'weapon_pipe_bomb_spawn'}
+          'weapon_adrenaline_spawn': 'weapon_pain_pills_spawn', 'weapon_vomitjar_spawn': 'weapon_pipe_bomb_spawn',
+          # L4D2-only guns placed directly (not through weapon_spawn) become the L4D1 gun of the same tier and kind
+          'weapon_smg_silenced_spawn': 'weapon_smg_spawn', 'weapon_smg_mp5_spawn': 'weapon_smg_spawn',
+          'weapon_shotgun_chrome_spawn': 'weapon_pumpshotgun_spawn', 'weapon_shotgun_spas_spawn': 'weapon_autoshotgun_spawn',
+          'weapon_rifle_ak47_spawn': 'weapon_rifle_spawn', 'weapon_rifle_desert_spawn': 'weapon_rifle_spawn',
+          'weapon_rifle_sg552_spawn': 'weapon_rifle_spawn', 'weapon_sniper_military_spawn': 'weapon_hunting_rifle_spawn',
+          'weapon_sniper_awp_spawn': 'weapon_hunting_rifle_spawn', 'weapon_sniper_scout_spawn': 'weapon_hunting_rifle_spawn'}
 START_ROOM_RADIUS = 600
 L2_KEYS = {'weapon_selection', 'spawn_without_director', 'melee_weapon', 'glowrange', 'no_cs_weapons'}
 L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge|beginscript|endscript', re.I)
@@ -80,6 +86,10 @@ def convert_entity(pairs, log):
         else:
             log['dropped weapon_item_spawn (no L4D1 item)'] += 1
             return None
+    elif cls == 'weapon_gascan_spawn':  # L4D1 places gas cans as plain physics props
+        pairs = [(k, v) for k, v in pairs if k in ('origin', 'angles', 'targetname', 'hammerid')]
+        log['weapon_gascan_spawn -> canister'] += 1
+        return pairs + [('model', CANISTERS['item8']), ('classname', 'prop_physics')]
     elif cls in RENAME:
         new = RENAME[cls]
     out = []
@@ -129,6 +139,16 @@ def convert(src, dst, drop_models=()):
                 ents[i] = [(k, v) for k, v in e if k != 'spawnflags'] + [('spawnflags', str(flags))]
                 log['start-room spawn set Must Exist'] += 1
     data[0] = write_ents(ents)
+
+    # HDR-only lighting (lump 8 empty) renders the world unlit on mat_hdr_level 0. Both lightmap lumps hold
+    # the same ColorRGBExp32 texels, so the HDR set stands in: lightmaps 53->8, the faces that point into
+    # them 58->7 (same face list, real lightofs) and the light list 54->15.
+    if not data[8] and data[53] and len(data[58]) == len(data[7]):
+        for ldr, hdr in ((8, 53), (7, 58), (15, 54)):
+            if data[hdr]:
+                data[ldr] = data[hdr]
+                L[ldr] = (L[hdr][0],) + L[ldr][1:]
+        log['LDR lighting filled from HDR'] += 1
 
     # game lump: rewrite sprp v9 -> v8; offsets are absolute and fixed up after layout
     g = data[35]

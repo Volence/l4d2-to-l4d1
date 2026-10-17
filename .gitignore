@@ -3,3 +3,5 @@ out/
 __pycache__/
 flowdump/include/
 flowdump/spcomp.exe
+in/
+ports/
