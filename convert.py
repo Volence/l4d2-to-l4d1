@@ -259,6 +259,21 @@ def main():
         say(f'== mission {os.path.basename(mf)}: map names lower-cased, {n_mod} VersusModifier from '
             f'VersusCompletionScore, boss chances as fractions')
 
+    # ---- model meshes: L4D1 loads <model>.vtx, L4D2 ships <model>.dx90.vtx -----------------------
+    # Without the plain name the model loads with no mesh ("MDLCache: Failed load of .VTX data") and the
+    # client crashes drawing it (divide by zero in shaderapidx9.dll, Haunted Forest 2026-10-17).
+    # The server never draws, so a server boot test does not catch this.
+    n_vtx = 0
+    for v in glob.glob(pkg + '/models/**/*.vtx', recursive=True):
+        base, kind = re.match(r'(.*?)((?:\.(?:dx80|dx90|sw|xbox))?)\.vtx$', v).groups()
+        if kind == '.dx90' and not os.path.exists(base + '.vtx'):
+            os.rename(v, base + '.vtx')
+            n_vtx += 1
+        elif kind in ('.dx80', '.sw', '.xbox'):
+            os.remove(v)  # mesh variants L4D1 never reads
+    if n_vtx:
+        say(f'== {n_vtx} models: .dx90.vtx renamed to .vtx (the name L4D1 loads)')
+
     # ---- pack (L4D1 only reads VPK v1) ---------------------------------------------------------
     if not os.path.exists(VENV):
         subprocess.run([sys.executable, '-m', 'venv', VENV], check=True)
