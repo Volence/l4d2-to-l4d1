@@ -207,14 +207,22 @@ def main():
         say('   !! missing: ' + f)
 
     # ---- campaign's own files (minus Hammer leftovers) -------------------------------------------
-    skip = re.compile(r'\.(vmf|vmx|log|prt|lin|jpg|bak)$|^maps/.*\.(vtf|bmp)$|^scripts/vscripts/', re.I)
+    # sound/sound.cache is the game's own precache index; an addon copy replaces the player's for every map
+    skip = re.compile(r'\.(vmf|vmx|log|prt|lin|jpg|bak)$|^maps/.*\.(vtf|bmp)$|^scripts/vscripts/|^sound/sound\.cache$', re.I)
+    shadows = []
     for root, _, fs in os.walk(src_dir):
         for fn in fs:
             rel = os.path.relpath(os.path.join(root, fn), src_dir).replace('\\', '/').lower()
             if skip.search(rel) or rel.startswith('maps/') or not '/' in rel:
                 continue
+            if rel in have:
+                shadows.append(rel)
             out = os.path.join(pkg, rel); os.makedirs(os.path.dirname(out), exist_ok=True)
             shutil.copy(os.path.join(root, fn), out)
+    if shadows:  # kept (the author changed them on purpose), but they apply to every map while installed
+        say(f'!! {len(shadows)} files replace ones players already have (stock or our pack), on every map:')
+        for f in sorted(shadows):
+            say('   ' + f)
 
     # ---- maps and navs ---------------------------------------------------------------------------
     os.makedirs(pkg + '/maps', exist_ok=True)
