@@ -1,9 +1,14 @@
-"""Give L4D2 flow-map water an L4D1-drawable copy under its own name.
+"""Give L4D2 water that L4D1 cannot draw an L4D1-drawable copy under its own name.
 
-L4D2 water materials with $flowmap make L4D1's Water shader come up with no vertex format, and the client
-dies with a divide by zero in shaderapidx9.dll the moment it draws the surface (Haunted Forest
-liquids/water_swamp_m2_beneath, found by bisecting world materials in the client 2026-10-17). The server
-never draws, so a server boot test passes.
+Some L4D2 Water materials make L4D1's Water shader come up with no vertex format, and the client dies with a
+divide by zero in shaderapidx9.dll (+0x7561, GetMaxVerticesToRender) the moment it draws the surface. The
+server never draws, so a server boot test passes. Found by bisecting world materials in the client
+(clienttest/bisect.py), 2026-10-17:
+  - liquids/water_swamp_m2_beneath (Haunted Forest 1): flow map, underwater, no reflect/refract texture
+  - diescraper/pool_water_beneath (Diescraper 4): plain "$refract 1" underwater, no reflect/refract texture
+Stock L4D1 water always names $refracttexture/$reflecttexture or runs $forcecheap, so a water that does
+neither (or uses an L4D2 flow map) is rewritten as cheap L4D1 water. A water whose $bottommaterial gets
+rewritten is copied too, so it points at the fixed bottom.
 
 The fixed copy cannot reuse the original path: our 00_l4d2maps_* pack ships L4D2's version of many of these
 materials and sorts ahead of a campaign VPK, so it would win. Each one becomes materials/l4d1/<path>.vmt and
@@ -18,9 +23,17 @@ KEEP = ('$abovewater', '$bottommaterial', '$fogenable', '$fogcolor', '$fogstart'
         '$refractamount', '$reflectamount', '$envmaptint', '$scale', '$flashlighttint')
 
 
-def is_flow_water(text):
+def is_water(text):
     m = SHADER.match(text)
-    return bool(m) and m.group(1).lower() == 'water' and re.search(r'\$flowmap\b', text, re.I) is not None
+    return bool(m) and m.group(1).lower() == 'water'
+
+
+def unsafe_water(text):
+    """True for water L4D1 cannot draw: an L4D2 flow map, or no reflect/refract texture and not cheap."""
+    if not is_water(text):
+        return False
+    has = lambda k: re.search(r'"?' + re.escape(k) + r'"?\s', text, re.I) is not None
+    return has('$flowmap') or not (has('$forcecheap') or has('$reflecttexture') or has('$refracttexture'))
 
 
 def l4d1_water(text, have_texture):
@@ -97,19 +110,26 @@ def fix(bsp_paths, read_vmt, write_vmt, have_texture, say):
     fixed = {}
 
     def convert(name):
+        """New name if the material (or its bottom) needed fixing, else None."""
         name = norm(name)
         if name in fixed:
             return fixed[name]
+        fixed[name] = None  # guards $bottommaterial cycles
         text = read_vmt(name)
-        if text is None or not is_flow_water(text):
-            fixed[name] = None
+        if text is None or not is_water(text):
+            return None
+        b = re.search(r'"?\$bottommaterial"?\s+"?([^"\s]+)"?', text, re.I)
+        bottom = convert(b.group(1)) if b else None
+        if unsafe_water(text):
+            new_text = l4d1_water(text, have_texture)
+            if b and not bottom:  # the bottom is fine as it is: point back at the original
+                new_text = new_text.replace(f'"{PREFIX}{norm(b.group(1))}"', f'"{norm(b.group(1))}"')
+        elif bottom:  # drawable itself, but its bottom was rewritten: same material, repointed bottom
+            new_text = text[:b.start(1)] + bottom + text[b.end(1):]
+        else:
             return None
         fixed[name] = PREFIX + name
-        write_vmt(PREFIX + name, l4d1_water(text, have_texture))
-        b = re.search(r'\$bottommaterial"?\s+"?([^"\s]+)', text, re.I)
-        if b and convert(b.group(1)) is None:  # bottom is fine as it is: point back at the original
-            fixed_text = l4d1_water(text, have_texture).replace(PREFIX + norm(b.group(1)), norm(b.group(1)))
-            write_vmt(PREFIX + name, fixed_text)
+        write_vmt(PREFIX + name, new_text)
         return fixed[name]
 
     for path in bsp_paths:

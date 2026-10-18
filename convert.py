@@ -240,11 +240,19 @@ def main():
         else:
             say('   !! no .nav shipped: the map is unplayable in versus without one')
 
-    # ---- L4D2 flow-map water: crashes the L4D1 client, gets an L4D1 copy under its own name (waterfix.py)
+    # ---- water L4D1 cannot draw: crashes the L4D1 client, gets an L4D1 copy under its own name (waterfix.py)
+    # what the client draws: the campaign's copy, else our pack's (L4D2's text), else Valve's L4D1 one,
+    # which works as shipped and is left alone
+    pack = set()
+    for v in glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk'):
+        pack |= set(vpk_index(v))
+
     def read_vmt(name):
         f = f'{pkg}/materials/{name}.vmt'
         if os.path.exists(f):
             return open(f, encoding='latin1').read()
+        if f'materials/{name}.vmt' in have and f'materials/{name}.vmt' not in pack:
+            return None
         e = l2.get(f'materials/{name}.vmt')
         return vpk_read(e).decode('latin1') if e else None
 
@@ -257,7 +265,7 @@ def main():
                           or os.path.exists(f'{pkg}/materials/{t.lower()}.vtf'))
     waters = waterfix.fix(sorted(glob.glob(pkg + '/maps/*.bsp')), read_vmt, write_vmt, have_tex, say)
     if waters:
-        say(f'== {len(waters)} L4D2 flow-map water materials rewritten for L4D1: {", ".join(waters)}')
+        say(f'== {len(waters)} water materials L4D1 cannot draw rewritten: {", ".join(waters)}')
 
     # ---- mission files ---------------------------------------------------------------------------
     # Map names lower-cased to match the BSPs. L4D1 scores with a per-map "VersusModifier" (stock 1.0,
