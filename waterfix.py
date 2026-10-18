@@ -18,9 +18,10 @@ import io, re, struct, zipfile
 
 PREFIX = 'l4d1/'
 SHADER = re.compile(r'\s*(?://[^\n]*\n\s*)*"?([A-Za-z0-9_]+)"?')
+# Only what Valve's own cheap water (liquids/ruralwater_river) uses. L4D2's $refracttint/$reflecttint are
+# applied as a flat full-bright colour by L4D1's cheap path: Haunted Forest's swamp came out solid yellow.
 KEEP = ('$abovewater', '$bottommaterial', '$fogenable', '$fogcolor', '$fogstart', '$fogend', '$lightmapwaterfog',
-        '$surfaceprop', '%compilewater', '%tooltexture', '$normalmap', '$reflecttint', '$refracttint',
-        '$refractamount', '$reflectamount', '$envmaptint', '$scale', '$flashlighttint')
+        '$surfaceprop', '%compilewater', '%tooltexture', '$normalmap', '$scale')
 
 
 def is_water(text):
@@ -38,7 +39,8 @@ def unsafe_water(text):
 
 def l4d1_water(text, have_texture):
     """Cheap L4D1 water from an L4D2 flow-map water: keep fog, normals and surface; drop the flow keys."""
-    out = ['Water', '{', '$forcecheap 1', '$envmap env_cubemap', '$bumpframe 0']
+    out = ['Water', '{', '$forcecheap 1', '$envmap env_cubemap', '$envmaptint "[1 1 1]"', '$envmapcontrast 1',
+           '$reflectentities 0', '$bumpframe 0']
     for k, v in re.findall(r'^\s*"?([$%][A-Za-z0-9_]+)"?\s+(.+?)\s*$', text, re.M):
         kl = k.lower()
         if kl not in KEEP:
