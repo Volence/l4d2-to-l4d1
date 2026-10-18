@@ -241,19 +241,21 @@ def main():
             say('   !! no .nav shipped: the map is unplayable in versus without one')
 
     # ---- water L4D1 cannot draw: crashes the L4D1 client, gets an L4D1 copy under its own name (waterfix.py)
-    # what the client draws: the campaign's copy, else our pack's (L4D2's text), else Valve's L4D1 one,
-    # which works as shipped and is left alone
-    pack = set()
-    for v in glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk'):
-        pack |= set(vpk_index(v))
+    # Judge each water by the copy the client actually loads: the campaign's, else our pack's, else the
+    # L4D1 install's (left4dead_dlc3 before left4dead). Being in the install proves nothing:
+    # left4dead_dlc3 ships L4D2-style water no stock map draws (liquids/water_c5m1_flow_beneath crashed
+    # Detour Ahead 4 when it was skipped, 2026-10-17).
+    client = {}
+    for v in [f'{L4D1}/hl2/hl2_misc_dir.vpk', f'{L4D1}/left4dead/pak01_dir.vpk', f'{L4D1}/left4dead_dlc3/pak01_dir.vpk',
+              *sorted(glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk'))]:
+        if os.path.exists(v):
+            client.update({k: e for k, e in vpk_index(v).items() if k.endswith('.vmt')})
 
     def read_vmt(name):
         f = f'{pkg}/materials/{name}.vmt'
         if os.path.exists(f):
             return open(f, encoding='latin1').read()
-        if f'materials/{name}.vmt' in have and f'materials/{name}.vmt' not in pack:
-            return None
-        e = l2.get(f'materials/{name}.vmt')
+        e = client.get(f'materials/{name}.vmt') or l2.get(f'materials/{name}.vmt')
         return vpk_read(e).decode('latin1') if e else None
 
     def write_vmt(name, text):
