@@ -12,6 +12,7 @@ import argparse, collections, glob, io, json, os, pickle, re, shutil, struct, su
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import vpkread
+import waterfix
 from bspinfo import lumps, ents, texdata, staticprops, pak
 import l4d2to1, nav2to1, rotoblin
 
@@ -238,6 +239,25 @@ def main():
             say(f'   nav: {n} areas, {v} visibility entries remapped')
         else:
             say('   !! no .nav shipped: the map is unplayable in versus without one')
+
+    # ---- L4D2 flow-map water: crashes the L4D1 client, gets an L4D1 copy under its own name (waterfix.py)
+    def read_vmt(name):
+        f = f'{pkg}/materials/{name}.vmt'
+        if os.path.exists(f):
+            return open(f, encoding='latin1').read()
+        e = l2.get(f'materials/{name}.vmt')
+        return vpk_read(e).decode('latin1') if e else None
+
+    def write_vmt(name, text):
+        f = f'{pkg}/materials/{name}.vmt'
+        os.makedirs(os.path.dirname(f), exist_ok=True)
+        open(f, 'w', encoding='latin1').write(text)
+
+    have_tex = lambda t: (f'materials/{t.lower()}.vtf' in have
+                          or os.path.exists(f'{pkg}/materials/{t.lower()}.vtf'))
+    waters = waterfix.fix(sorted(glob.glob(pkg + '/maps/*.bsp')), read_vmt, write_vmt, have_tex, say)
+    if waters:
+        say(f'== {len(waters)} L4D2 flow-map water materials rewritten for L4D1: {", ".join(waters)}')
 
     # ---- mission files ---------------------------------------------------------------------------
     # Map names lower-cased to match the BSPs. L4D1 scores with a per-map "VersusModifier" (stock 1.0,

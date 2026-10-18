@@ -48,6 +48,10 @@ RENAME = {'prop_minigun_l4d1': 'prop_minigun', 'weapon_pistol_magnum_spawn': 'we
           'weapon_rifle_ak47_spawn': 'weapon_rifle_spawn', 'weapon_rifle_desert_spawn': 'weapon_rifle_spawn',
           'weapon_rifle_sg552_spawn': 'weapon_rifle_spawn', 'weapon_sniper_military_spawn': 'weapon_hunting_rifle_spawn',
           'weapon_sniper_awp_spawn': 'weapon_hunting_rifle_spawn', 'weapon_sniper_scout_spawn': 'weapon_hunting_rifle_spawn'}
+# func_precipitation: L4D1 knows 0 rain, 1 snow, 2 ash, 3 snowfall. L4D2's particle types (4 rain, 5 ash,
+# 6 rainstorm, 7 snow) have no renderer in L4D1 and crash the client the moment it draws them (divide by zero
+# in shaderapidx9.dll, Haunted Forest 2026-10-17); map each to its plain L4D1 counterpart.
+PRECIP = {'4': '0', '5': '2', '6': '0', '7': '1'}
 START_ROOM_RADIUS = 600
 L2_KEYS = {'weapon_selection', 'spawn_without_director', 'melee_weapon', 'glowrange', 'no_cs_weapons'}
 L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge|beginscript|endscript', re.I)
@@ -102,6 +106,9 @@ def convert_entity(pairs, log):
             continue
         if k == 'classname':
             v = new
+        if cls == 'func_precipitation' and k.lower() == 'preciptype' and v in PRECIP:
+            log[f'func_precipitation type {v} -> {PRECIP[v]}'] += 1
+            v = PRECIP[v]
         out.append((k, v))
     if new in W:
         model, count = W[new]

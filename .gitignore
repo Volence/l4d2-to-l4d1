@@ -5,3 +5,6 @@ flowdump/include/
 flowdump/spcomp.exe
 in/
 ports/
+clienttest/runs/
+clienttest/v/
+clienttest/*.vpk
