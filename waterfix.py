@@ -22,6 +22,8 @@ SHADER = re.compile(r'\s*(?://[^\n]*\n\s*)*"?([A-Za-z0-9_]+)"?')
 # applied as a flat full-bright colour by L4D1's cheap path: Haunted Forest's swamp came out solid yellow.
 KEEP = ('$abovewater', '$bottommaterial', '$fogenable', '$fogcolor', '$fogstart', '$fogend', '$lightmapwaterfog',
         '$surfaceprop', '%compilewater', '%tooltexture', '$normalmap', '$scale')
+LIGHTMAP_FOG = re.compile(r'^\s*"?\$lightmapwaterfog"?\s+"?1', re.M | re.I)
+LIGHTMAP_FOG_SCALE = 0.2
 
 
 def is_water(text):
@@ -50,6 +52,12 @@ def l4d1_water(text, have_texture):
             val = 'nature/water_frame01_normal'
         if kl == '$bottommaterial':
             val = PREFIX + val.replace('\\', '/').lower()  # repointed; the bottom is converted too
+        if kl == '$fogcolor' and LIGHTMAP_FOG.search(text):
+            # L4D2 multiplies lightmapped water fog by the lightmap; L4D1 draws the fog unlit, so Detour
+            # Ahead's dark sewer (fog 90 70 20) showed as a flat bright yellow sheet. 0.2 matched in client.
+            nums = re.findall(r'[\d.]+', val)
+            if len(nums) == 3:
+                val = '{ %s }' % ' '.join(str(round(float(n) * LIGHTMAP_FOG_SCALE)) for n in nums)
         out.append(f'{k} "{val}"')
     if not any(l.lower().startswith('$normalmap') for l in out):
         out.append('$normalmap "nature/water_frame01_normal"')

@@ -54,6 +54,9 @@ RENAME = {'prop_minigun_l4d1': 'prop_minigun', 'weapon_pistol_magnum_spawn': 'we
 PRECIP = {'4': '0', '5': '2', '6': '0', '7': '1'}
 START_ROOM_RADIUS = 600
 L2_KEYS = {'weapon_selection', 'spawn_without_director', 'melee_weapon', 'glowrange', 'no_cs_weapons'}
+# L4D2-only inputs with an L4D1 equivalent. L4D1's info_director takes only PanicEvent and PanicEventControlled
+# (server.so datadesc); a ForcePanicEvent is dropped silently, so Detour Ahead's map 2-4 events spawned no horde.
+L2_INPUTS = {'forcepanicevent': 'PanicEvent'}
 L2_OUTPUT_HINT = re.compile(r'runscript|callscriptfunction|scriptedpanic|setscript|scavenge|beginscript|endscript', re.I)
 
 
@@ -101,6 +104,10 @@ def convert_entity(pairs, log):
         if k in L2_KEYS or re.fullmatch(r'item\d+', k):
             continue
         v = v.replace('\x1b', ',')
+        p = v.split(',')
+        if k.lower().startswith(('on', 'out')) and len(p) > 1 and p[1].lower() in L2_INPUTS:
+            log[f'input {p[1]} -> {L2_INPUTS[p[1].lower()]}'] += 1
+            v = ','.join([p[0], L2_INPUTS[p[1].lower()]] + p[2:])
         if L2_OUTPUT_HINT.search(v) and k.lower().startswith('on'):
             log['stripped script/scavenge output'] += 1
             continue
