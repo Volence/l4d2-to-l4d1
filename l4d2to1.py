@@ -138,6 +138,33 @@ def convert_entity(pairs, log):
     return out
 
 
+def fog_volumes_to_triggers(ents, log):
+    """L4D2 picks a player's fog controller by fog_volume; L4D1 has no fog_volume and keeps the master fog
+    everywhere. Detour Ahead 4's bridge uses a thick fog that hides where an area portal window stops
+    drawing; under the master fog that cutoff showed as black sky with the trains gone. A trigger that
+    sends !activator SetFogController (a CBasePlayer input L4D1 has) on entry, and the master on exit,
+    does the same job."""
+    fogs = [dict(e) for e in ents if dict(e).get('classname') == 'env_fog_controller' and dict(e).get('targetname')]
+    if not fogs:
+        return ents
+    master = next((f for f in fogs if int(f.get('spawnflags', '0') or 0) & 1), fogs[0])['targetname']
+    out = []
+    for e in ents:
+        kv = dict(e)
+        if kv.get('classname') != 'fog_volume' or not kv.get('FogName') or not kv.get('model'):
+            out.append(e)
+            continue
+        if kv.get('StartDisabled', '0') != '0':
+            log['dropped disabled fog_volume'] += 1
+            continue
+        out.append([('classname', 'trigger_multiple'), ('model', kv['model']), ('spawnflags', '1'), ('wait', '0'),
+                    ('StartDisabled', '0'), ('origin', kv.get('origin', '0 0 0')),
+                    ('OnStartTouch', f'!activator,SetFogController,{kv["FogName"]},0,-1'),
+                    ('OnEndTouch', f'!activator,SetFogController,{master},0,-1')])
+        log['fog_volume -> fog trigger'] += 1
+    return out
+
+
 def write_ents(ents):
     s = ''.join('{\n' + ''.join(f'"{k}" "{v}"\n' for k, v in e) + '}\n' for e in ents)
     return s.encode('latin1') + b'\0'
@@ -152,6 +179,7 @@ def convert(src, dst, drop_models=()):
     log = collections.Counter()
 
     ents = [e for e in (convert_entity(p, log) for p in parse_ents(data[0].decode('latin1'))) if e]
+    ents = fog_volumes_to_triggers(ents, log)
     # L4D1's director culls weapon spawns without "Must Exist" (spawnflag 2); L4D2 start rooms often
     # leave it off, so the start-room guns vanish. Force it on near the player start.
     pos = lambda e: [float(x) for x in dict(e).get('origin', '0 0 0').split()]
