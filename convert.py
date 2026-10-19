@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Convert an L4D2 custom campaign into an L4D1 addon VPK.
 
-    ./convert.py path/to/campaign.zip|.vpk [--name NAME] [--drop-models PREFIX ...]
+    ./convert.py path/to/campaign.zip|.vpk [--name NAME] [--drop-models PREFIX ...] [--no-dict]
 
-Writes out/<name>/report.txt and out/<name>/<name>_l4d1.vpk. Read the report before playing:
+Writes out/<name>/report.txt and out/<name>/<name>_l4d1.vpk, then runs dictbuild.sh so every map carries an
+L4D1 string table dictionary (without one a SourceTV demo can crash the server; see dictfix.py). Read the report before playing:
 it lists VScript use, entities with no L4D1 equivalent and assets that could not be found.
 See README.md for what each step does and why.
 """
@@ -97,6 +98,8 @@ def main():
     ap.add_argument('--name', help='output name (default: input file stem)')
     ap.add_argument('--drop-models', nargs='*', default=list(DEFAULT_DROP),
                     help=f'static prop model prefixes to remove (default: {" ".join(DEFAULT_DROP)})')
+    ap.add_argument('--no-dict', action='store_true',
+                    help='skip dictbuild.sh; the VPK then keeps L4D2 dictionaries and MUST NOT ship')
     a = ap.parse_args()
     name = a.name or re.sub(r'[^a-z0-9_]+', '_', os.path.basename(a.src).rsplit('.', 1)[0].lower())
     work = os.path.join(HERE, 'out', name)
@@ -315,7 +318,17 @@ def main():
     say(f'== wrote {out} ({os.path.getsize(out) // 2**20} MB)')
     json.dump(director_scripts, open(os.path.join(work, 'director_scripts.json'), 'w'), indent=1)
     say(f'== Rotoblin starter files: {rotoblin.main(pkg)} (see README "Rotoblin integration")')
+    # Last, because it loads the finished VPK on the Dallas mirror and repacks it (see dictbuild.sh).
+    if a.no_dict:
+        say('!! --no-dict: maps keep L4D2 string table dictionaries; run ./dictbuild.sh before shipping')
+    else:
+        r = subprocess.run([os.path.join(HERE, 'dictbuild.sh'), name], capture_output=True, text=True)
+        say('== dictbuild.sh: ' + ' | '.join(l for l in r.stdout.splitlines() if 'srcds_run' not in l and 'Killed' not in l))
+        if r.returncode:
+            say(f'!! dictbuild.sh FAILED (exit {r.returncode}): this VPK MUST NOT ship until it succeeds\n{r.stderr[-2000:]}')
     open(os.path.join(work, 'report.txt'), 'w').write('\n'.join(rep) + '\n')
+    if not a.no_dict and r.returncode:
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -4,11 +4,11 @@
 ./convert.py ~/Downloads/some_campaign.zip --name short_name   # VPK, report, Rotoblin starter files
 ./flowdump.sh short_name                                        # the game's real flow for every map
 ./rotoblin.py out/short_name/pkg                                # regenerate Rotoblin files from it
-./dictbuild.sh short_name                                       # L4D1 string table dictionaries (REQUIRED)
 ```
 
-**Never ship a VPK without `dictbuild.sh`.** Every rebuild with `convert.py` puts L4D2's string table
-dictionary back into each BSP. Where it misses L4D1's sounds and scenes, the first SourceTV demo of a
+**`convert.py` runs `dictbuild.sh` as its last step** (and exits non-zero if it fails). A VPK built with
+`--no-dict`, or by any other route, MUST get `./dictbuild.sh <name>` before it ships: each BSP otherwise keeps L4D2's string table
+dictionary. Where it misses L4D1's sounds and scenes, the first SourceTV demo of a
 match overflows a 96000-byte engine buffer and the dedicated server dies (Carried Off took Dallas down at
 match 727, 2026-10-18). `dictbuild.sh` loads each map on the Dallas mirror (`/home/volence/l4d1-cotest`,
 an rsync of Dallas with its logaddress pointed at a dead port), runs `stringtabledictionary`, packs the
