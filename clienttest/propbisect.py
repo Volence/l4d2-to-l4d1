@@ -6,12 +6,14 @@ loads it in the owner's client through the HUD harness at one view, and measures
 Built for Detour Ahead 4 (2026-10-19): facing the bridge the sky went black and no static props drew,
 with "vertexlit_and_unlit_generic_ps30 ... Couldn't load combo 520" in the log.
 """
-import io, os, shutil, struct, subprocess, sys, zipfile
+import sys
+sys.path = [p for p in sys.path if not p.rstrip("/").endswith("clienttest")]  # clienttest/bisect.py shadows stdlib bisect
+import io, os, shutil, struct, subprocess, zipfile
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import bspinfo
 
 HARNESS = '/home/volence/l4d/hud/ingame-harness'
-ADDONS = '/home/volence/.local/share/Steam/steamapps/common/left 4 dead/left4dead/addons'
+ADDONS = '/home/volence/l4d1-dt-client/left4dead/addons'   # the private client, never the owner's install
 VENV_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.venv', 'bin', 'python')
 WORK = '/home/volence/l4d1-cotest/propbisect'
 TESTMAP = 'zzbisect'
@@ -86,10 +88,11 @@ def probe(src, hide, view, tag):
     out = os.path.join(WORK, 'shots-' + tag)
     shutil.rmtree(out, ignore_errors=True)
     try:
-        subprocess.run([os.path.join(HARNESS, 'run.sh'), 'none', steps, out], capture_output=True, timeout=400)
+        subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dtclient.py'), steps, out],
+                       capture_output=True, timeout=600)
     finally:
         os.remove(vpk)
-    png = os.path.join(out, 'probe', 'view.png')
+    png = os.path.join(out, 'view.png')
     level = sky_level(png) if os.path.exists(png) else -1
     print(f'{tag}: hid {len(hide)} models, sky level {level:.1f}', flush=True)
     return level

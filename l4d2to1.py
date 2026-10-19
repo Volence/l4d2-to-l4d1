@@ -180,25 +180,6 @@ def convert(src, dst, drop_models=()):
 
     ents = [e for e in (convert_entity(p, log) for p in parse_ents(data[0].decode('latin1'))) if e]
     ents = fog_volumes_to_triggers(ents, log)
-    # A never-solid func_brush whose brush model has no faces draws and blocks nothing, yet in L4D1 it stops
-    # the frame drawing: Detour Ahead 4's "bridgeap1" (model *160, 0 faces) blacked out the sky and every
-    # static prop whenever it was in view (found by clienttest/propbisect.py ents). Drop such brushes.
-    faces = [struct.unpack('<i', data[14][48 * m + 44:48 * m + 48])[0] for m in range(len(data[14]) // 48)]
-    def empty_brush(e):
-        kv = dict(e)
-        mdl = kv.get('model', '')
-        return (kv.get('classname') == 'func_brush' and kv.get('Solidity') == '1' and mdl.startswith('*')
-                and mdl[1:].isdigit() and int(mdl[1:]) < len(faces) and faces[int(mdl[1:])] == 0)
-    dropped = [e for e in ents if empty_brush(e)]
-    if dropped:
-        log['dropped faceless never-solid func_brush'] += len(dropped)
-        gone = {dict(e).get('targetname') for e in dropped} - {None}
-        ents = [e for e in ents if not empty_brush(e)]
-        # They are the fade brushes of func_areaportalwindows (bridgeap1 is window 17's target). Without a
-        # target the server leaves the window's background model unset and the client draws no fade brush;
-        # the portal still opens and closes by distance. (Valve's 680 L4D1 windows all have drawable targets.)
-        ents = [[(k, v) for k, v in e if not (k == 'target' and v in gone and dict(e).get('classname') == 'func_areaportalwindow')]
-                for e in ents]
     # L4D1's director culls weapon spawns without "Must Exist" (spawnflag 2); L4D2 start rooms often
     # leave it off, so the start-room guns vanish. Force it on near the player start.
     pos = lambda e: [float(x) for x in dict(e).get('origin', '0 0 0').split()]

@@ -51,7 +51,8 @@ def l4d1_water(text, have_texture):
         if kl == '$normalmap' and not have_texture(val):
             val = 'nature/water_frame01_normal'
         if kl == '$bottommaterial':
-            val = PREFIX + val.replace('\\', '/').lower()  # repointed; the bottom is converted too
+            val = val.replace('\\', '/').lower()
+            val = val if val.startswith(PREFIX) else PREFIX + val  # repointed; the bottom is converted too
         if kl == '$fogcolor' and LIGHTMAP_FOG.search(text):
             # L4D2 multiplies lightmapped water fog by the lightmap; L4D1 draws the fog unlit, so Detour
             # Ahead's dark sewer (fog 90 70 20) showed as a flat bright yellow sheet. 0.2 matched in client.
@@ -114,7 +115,7 @@ def pak_files(d):
     return {n: z.read(n) for n in z.namelist()}
 
 
-def fix(bsp_paths, read_vmt, write_vmt, have_texture, say):
+def fix(bsp_paths, read_vmt, write_vmt, have_texture, say, stock=lambda name: False):
     """read_vmt(path under materials/, no ext) -> text or None; write_vmt(path, text) adds it to the package."""
     norm = lambda n: n.replace('\\', '/').lower().removesuffix('.vmt').removeprefix('materials/')
     fixed = {}
@@ -130,7 +131,10 @@ def fix(bsp_paths, read_vmt, write_vmt, have_texture, say):
             return None
         b = re.search(r'"?\$bottommaterial"?\s+"?([^"\s]+)"?', text, re.I)
         bottom = convert(b.group(1)) if b else None
-        if unsafe_water(text):
+        # Not Valve's own L4D1 water and not already cheap: L4D2's expensive (reflect/refract) water drawn by L4D1
+        # blanks the sky and every static prop in the frame (Detour Ahead 4's river under the bridge, 2026-10-19).
+        expensive = not stock(name) and not re.search(r'"?\$forcecheap"?\s+"?1', text, re.I)
+        if unsafe_water(text) or expensive:
             new_text = l4d1_water(text, have_texture)
             if b and not bottom:  # the bottom is fine as it is: point back at the original
                 new_text = new_text.replace(f'"{PREFIX}{norm(b.group(1))}"', f'"{norm(b.group(1))}"')

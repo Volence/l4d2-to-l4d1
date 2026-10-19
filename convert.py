@@ -268,7 +268,16 @@ def main():
 
     have_tex = lambda t: (f'materials/{t.lower()}.vtf' in have
                           or os.path.exists(f'{pkg}/materials/{t.lower()}.vtf'))
-    waters = waterfix.fix(sorted(glob.glob(pkg + '/maps/*.bsp')), read_vmt, write_vmt, have_tex, say)
+    # Valve's own L4D1 water: in the base install, not overridden by our pack or the campaign. Everything
+    # else that is expensive water gets made cheap (see waterfix.unsafe_water).
+    base = set(vpk_index(f'{L4D1}/left4dead/pak01_dir.vpk')) if os.path.exists(f'{L4D1}/left4dead/pak01_dir.vpk') else set()
+    packed = set()
+    for v in glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk') + [f'{L4D1}/left4dead_dlc3/pak01_dir.vpk']:
+        if os.path.exists(v):
+            packed |= {k for k in vpk_index(v) if k.endswith('.vmt')}
+    stock = lambda n: (f'materials/{n}.vmt' in base and f'materials/{n}.vmt' not in packed
+                       and not os.path.exists(f'{pkg}/materials/{n}.vmt'))
+    waters = waterfix.fix(sorted(glob.glob(pkg + '/maps/*.bsp')), read_vmt, write_vmt, have_tex, say, stock)
     if waters:
         say(f'== {len(waters)} water materials L4D1 cannot draw rewritten: {", ".join(waters)}')
 
