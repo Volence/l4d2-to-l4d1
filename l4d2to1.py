@@ -117,6 +117,12 @@ def convert_entity(pairs, log):
             log[f'func_precipitation type {v} -> {PRECIP[v]}'] += 1
             v = PRECIP[v]
         out.append((k, v))
+    # renderamt does nothing under rendermode 0, so mappers leave stray values (Detour Ahead: hittable cars at 100).
+    # Rotoblin's l4d_tank_props restores a hittable's colour with RENDER_TRANSCOLOR forced on after a tank, which
+    # turns that alpha on: whole streets of cars went see-through. Same look in L4D2, safe under that plugin.
+    if new.startswith('prop_') and dict(out).get('rendermode', '0') == '0' and dict(out).get('renderamt', '255') != '255':
+        out = [(k, '255' if k == 'renderamt' else v) for k, v in out]
+        log['renderamt -> 255 (rendermode 0)'] += 1
     if new in W:
         model, count = W[new]
         out = [(k, v) for k, v in out if k != 'model'] + [('model', model)]
