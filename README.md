@@ -4,7 +4,15 @@
 ./convert.py ~/Downloads/some_campaign.zip --name short_name   # VPK, report, Rotoblin starter files
 ./flowdump.sh short_name                                        # the game's real flow for every map
 ./rotoblin.py out/short_name/pkg                                # regenerate Rotoblin files from it
+./dictbuild.sh short_name                                       # L4D1 string table dictionaries (REQUIRED)
 ```
+
+**Never ship a VPK without `dictbuild.sh`.** Every rebuild with `convert.py` puts L4D2's string table
+dictionary back into each BSP. Where it misses L4D1's sounds and scenes, the first SourceTV demo of a
+match overflows a 96000-byte engine buffer and the dedicated server dies (Carried Off took Dallas down at
+match 727, 2026-10-18). `dictbuild.sh` loads each map on the Dallas mirror (`/home/volence/l4d1-cotest`,
+an rsync of Dallas with its logaddress pointed at a dead port), runs `stringtabledictionary`, packs the
+result with `dictfix.py` and repacks the VPK. The BSP changes, so players need the new VPK.
 
 Then read `out/<name>/report.txt`, edit `out/<name>/rotoblin/`, play every map, and integrate
 (see "Rotoblin integration" below).
@@ -136,6 +144,8 @@ shared server's SourceMod error log through a linked `logs/` file; the script no
 An empty L4D1 server hibernates and stops running timers, so scripts drive it over rcon (`rcon.py`).
 
 ## Files
+
+- `dictfix.py` / `dictbuild.sh`: L4D1 string table dictionary per map (see the top of this file)
 
 - `convert.py`: the pipeline (extract, analyse, pull assets, convert maps and navs, fix missions, pack)
 - `l4d2to1.py`: BSP and entity conversion; runs standalone as `l4d2to1.py in.bsp out.bsp [drop-prefix...]`
