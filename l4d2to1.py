@@ -116,6 +116,11 @@ def convert_entity(pairs, log):
         if cls == 'func_precipitation' and k.lower() == 'preciptype' and v in PRECIP:
             log[f'func_precipitation type {v} -> {PRECIP[v]}'] += 1
             v = PRECIP[v]
+        # Ajar doors (spawnpos 3) never move in L4D1, not even on ent_fire Open (Carried Off 2 at 8836 4228
+        # 336 blocked the route); Valve's 758 L4D1 doors never start ajar. Start them closed instead.
+        if cls.startswith('prop_door_rotating') and k.lower() == 'spawnpos' and v == '3':
+            log['ajar door -> closed'] += 1
+            v = '0'
         out.append((k, v))
     # renderamt does nothing under rendermode 0, so mappers leave stray values (Detour Ahead: hittable cars at 100).
     # Rotoblin's l4d_tank_props restores a hittable's colour with RENDER_TRANSCOLOR forced on after a tank, which
