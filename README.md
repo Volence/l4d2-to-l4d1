@@ -157,15 +157,25 @@ An empty L4D1 server hibernates and stops running timers, so scripts drive it ov
 - `make-test-server.sh`, `rcon.py`: the isolated test server and a minimal rcon client
 - `bspinfo.py`, `nav.py`, `vpkread.py`: readers
 
-## Comp Rework stripper port (compstripper/)
+## Comp Rework stripper port (compstripper.py, stripverify.sh)
 
-`compstripper/port.sh <L4D2-Competitive-Rework checkout> <work dir>` ports SirPlease's zonemod stripper cfgs for
-Detour Ahead, Carried Off, Haunted Forest, Open Road (maps 1-5; there is no x1m6 cfg) and Diescraper (_361)
-onto our conversions. `stripper2to1.py` checks every filter/modify match against both the original L4D2 BSP and
-the converted one; where the converter renamed a class (weapon_spawn, weapon_item_spawn) it rematches by hammerid
-and, for weapon_selection / itemN edits, converts the L4D2 entity again with the edit applied (same pick) and
-sets the L4D1 class. env_physics_blocker -> env_player_blocker (BlockType 4 -> 0: L4D1 blockers never stop
-props), VScript outputs and L4D2-only inputs (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
-IgnoreFallDamageWithoutReset, HowAngry) go, ForcePanicEvent -> PanicEvent. Every change is tagged `[L4D1]` in
-the cfg; report.txt lists them. `stripcheck.py <cfg> <stripper_dump file>` verifies a cfg against the lump the
-server spawned (all 22 clean on /home/volence/l4d1-striptest, port 27105, 2026-10-21). No CCR cfg exists upstream.
+convert.py ports SirPlease's L4D2-Competitive-Rework zonemod stripper cfg for every map upstream has one
+(`compstripper.py`, after rotoblin.py; `--no-comp` skips), then loads each ported map on the strip rig and checks
+it (`stripverify.sh`, after dictbuild.sh; `--no-verify` skips). Rerun alone with `./compstripper.py <name>...`
+(pulls upstream into upstream/, gitignored; `--no-pull` keeps it) and `./stripverify.sh <name>`.
+
+- `stripper2to1.py` checks every filter/modify match against both the original L4D2 BSP (out/<name>/src) and the
+  converted one. Where the converter renamed a class (weapon_spawn, weapon_item_spawn) it rematches by hammerid; for
+  weapon_selection / itemN edits it converts the L4D2 entity again with the edit applied (same pick) and sets the
+  L4D1 class. env_physics_blocker -> env_player_blocker (BlockType 4 -> 0: L4D1 blockers never stop props).
+  VScript outputs and L4D2-only inputs go (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
+  IgnoreFallDamageWithoutReset, HowAngry: L4D1 cannot ignore fall damage at all); ForcePanicEvent -> PanicEvent.
+  Every change is tagged `[L4D1]` in the cfg; out/<name>/rotoblin/compstripper.txt lists them.
+- compstripper.py keeps rotoblin.py's header (flow, events, lost Director Scripts) from rotoblin/generated/ and its
+  start ammo pile unless the port already has one near info_player_start, then splits rotated blockers with
+  deploy/tools/blocker-angles (`--cap 96`).
+- `stripcheck.py <cfg> <stripper_dump file>` verifies a cfg against the lump the server spawned. The strip rig is
+  /home/volence/l4d1-striptest, port 27105 (`./make-strip-rig.sh`: hard-link copy of cotest, site-facing plugins
+  in plugins/disabled).
+- compstripper/*.cfg is the verified 2026-10-21 snapshot for DA, CO, HF, Open Road 1-5, Diescraper (_361).
+  Upstream has no cfg for CCR or x1m6.

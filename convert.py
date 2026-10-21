@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Convert an L4D2 custom campaign into an L4D1 addon VPK.
 
-    ./convert.py path/to/campaign.zip|.vpk [--name NAME] [--drop-models PREFIX ...] [--no-dict]
+    ./convert.py path/to/campaign.zip|.vpk [--name NAME] [--drop-models PREFIX ...] [--no-dict] [--no-comp] [--no-verify]
 
 Writes out/<name>/report.txt and out/<name>/<name>_l4d1.vpk, then runs dictbuild.sh so every map carries an
-L4D1 string table dictionary (without one a SourceTV demo can crash the server; see dictfix.py). Read the report before playing:
+L4D1 string table dictionary (without one a SourceTV demo can crash the server; see dictfix.py). Maps that SirPlease's
+L4D2-Competitive-Rework has a zonemod stripper cfg for get it ported (compstripper.py) into out/<name>/rotoblin/stripper/,
+and stripverify.sh loads each of those maps on the strip rig and checks the result. Read the report before playing:
 it lists VScript use, entities with no L4D1 equivalent and assets that could not be found.
 See README.md for what each step does and why.
 """
@@ -15,7 +17,7 @@ sys.path.insert(0, HERE)
 import vpkread
 import waterfix
 from bspinfo import lumps, ents, texdata, staticprops, pak
-import l4d2to1, nav2to1, rotoblin
+import compstripper, l4d2to1, nav2to1, rotoblin
 
 STEAM = os.path.expanduser('~/.local/share/Steam/steamapps/common')
 L4D1 = f'{STEAM}/left 4 dead'
@@ -100,6 +102,8 @@ def main():
                     help=f'static prop model prefixes to remove (default: {" ".join(DEFAULT_DROP)})')
     ap.add_argument('--no-dict', action='store_true',
                     help='skip dictbuild.sh; the VPK then keeps L4D2 dictionaries and MUST NOT ship')
+    ap.add_argument('--no-comp', action='store_true', help='skip porting Comp Rework stripper cfgs (compstripper.py)')
+    ap.add_argument('--no-verify', action='store_true', help='skip loading the ported cfgs on the strip rig (stripverify.sh)')
     a = ap.parse_args()
     name = a.name or re.sub(r'[^a-z0-9_]+', '_', os.path.basename(a.src).rsplit('.', 1)[0].lower())
     work = os.path.join(HERE, 'out', name)
@@ -327,6 +331,12 @@ def main():
     say(f'== wrote {out} ({os.path.getsize(out) // 2**20} MB)')
     json.dump(director_scripts, open(os.path.join(work, 'director_scripts.json'), 'w'), indent=1)
     say(f'== Rotoblin starter files: {rotoblin.main(pkg)} (see README "Rotoblin integration")')
+    if not a.no_comp:
+        try:
+            for line in compstripper.main([name]):
+                say('== Comp Rework stripper: ' + line + f' (report: out/{name}/rotoblin/compstripper.txt)')
+        except subprocess.CalledProcessError as e:
+            say(f'!! compstripper.py failed ({e}); maps keep the Rotoblin starter cfgs')
     # Last, because it loads the finished VPK on the Dallas mirror and repacks it (see dictbuild.sh).
     if a.no_dict:
         say('!! --no-dict: maps keep L4D2 string table dictionaries; run ./dictbuild.sh before shipping')
@@ -335,8 +345,16 @@ def main():
         say('== dictbuild.sh: ' + ' | '.join(l for l in r.stdout.splitlines() if 'srcds_run' not in l and 'Killed' not in l))
         if r.returncode:
             say(f'!! dictbuild.sh FAILED (exit {r.returncode}): this VPK MUST NOT ship until it succeeds\n{r.stderr[-2000:]}')
+    # After dictbuild: it loads the final VPK, which then carries the dictionaries.
+    v = None
+    if not a.no_comp and not a.no_verify:
+        v = subprocess.run([os.path.join(HERE, 'stripverify.sh'), name], capture_output=True, text=True)
+        for line in v.stdout.splitlines():
+            say('== stripverify.sh: ' + line)
+        if v.returncode:
+            say(f'!! stripverify.sh FAILED (exit {v.returncode}): fix the ported stripper cfgs before shipping them')
     open(os.path.join(work, 'report.txt'), 'w').write('\n'.join(rep) + '\n')
-    if not a.no_dict and r.returncode:
+    if (not a.no_dict and r.returncode) or (v and v.returncode):
         sys.exit(1)
 
 

@@ -8,3 +8,4 @@ ports/
 clienttest/runs/
 clienttest/v/
 clienttest/*.vpk
+upstream/
