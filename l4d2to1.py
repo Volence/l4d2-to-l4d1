@@ -27,6 +27,17 @@ SELECTION = {  # weapon_spawn weapon_selection -> candidate L4D1 classes
     'any_primary': ['weapon_smg_spawn', 'weapon_pumpshotgun_spawn', 'weapon_autoshotgun_spawn',
                     'weapon_rifle_spawn', 'weapon_hunting_rifle_spawn'],
     'any_pistol': ['weapon_pistol_spawn'],
+    'tier1_smg': ['weapon_smg_spawn'],
+    'any_shotgun': ['weapon_pumpshotgun_spawn', 'weapon_autoshotgun_spawn'],
+    # a single named gun; L4D2-only guns become the L4D1 gun of the same tier and kind (as RENAME does)
+    'weapon_smg': ['weapon_smg_spawn'], 'weapon_smg_silenced': ['weapon_smg_spawn'], 'weapon_smg_mp5': ['weapon_smg_spawn'],
+    'weapon_pumpshotgun': ['weapon_pumpshotgun_spawn'], 'weapon_shotgun_chrome': ['weapon_pumpshotgun_spawn'],
+    'weapon_autoshotgun': ['weapon_autoshotgun_spawn'], 'weapon_shotgun_spas': ['weapon_autoshotgun_spawn'],
+    'weapon_rifle': ['weapon_rifle_spawn'], 'weapon_rifle_ak47': ['weapon_rifle_spawn'],
+    'weapon_rifle_desert': ['weapon_rifle_spawn'], 'weapon_rifle_sg552': ['weapon_rifle_spawn'],
+    'weapon_hunting_rifle': ['weapon_hunting_rifle_spawn'], 'weapon_sniper_military': ['weapon_hunting_rifle_spawn'],
+    'weapon_sniper_awp': ['weapon_hunting_rifle_spawn'], 'weapon_sniper_scout': ['weapon_hunting_rifle_spawn'],
+    'weapon_pistol': ['weapon_pistol_spawn'], 'weapon_pistol_magnum': ['weapon_pistol_spawn'],
 }
 ITEMS = {  # weapon_item_spawn flags (L4D2 FGD) -> L4D1 class; None = no L4D1 equivalent
     'item1': 'weapon_ammo_spawn', 'item2': 'weapon_first_aid_kit_spawn', 'item3': 'weapon_molotov_spawn',

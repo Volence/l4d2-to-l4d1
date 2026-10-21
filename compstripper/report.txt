@@ -1,0 +1,229 @@
+cdta_01detour.cfg {'modify': 4, 'filter': 12, 'add': 69}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=coop_scriptstart: dropped delete OnTrigger "director,BeginScript,cdta01_passive,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=1782640: 1 -> weapon_smg_spawn
+   ADD changed: add classname=weapon_spawn origin=4168 2584 127 (weapon_spawn -> weapon_pumpshotgun_spawn)
+   ADD changed: add classname=env_physics_blocker origin=3903.89 2711.1 151 (rotated blocker (angles 0 345 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3898.09 2712.66 150 (rotated blocker (angles 0 345 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4029 2542 567 (rotated blocker (angles 0 21.5 0): split by blocker-angles)
+cdta_02road.cfg {'filter': 23, 'modify': 8, 'add': 53}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=gbutton: dropped delete OnPressed "director,BeginScript,dta02_passive,5,-1" (VScript or an input L4D1 does not have); dropped insert OnPressed "director,EndScript,,0,-1" (VScript or an input L4D1 does not have)
+   ADD changed: add classname=weapon_spawn origin=-6594 -5148 141 (weapon_spawn -> weapon_pumpshotgun_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=as3: 1 -> weapon_smg_spawn
+   ADD changed: add classname=env_physics_blocker origin=-6337 -3922 596 (rotated blocker (angles 0 41 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-2952 -334 -67 (BlockType 4 -> 0 (L4D1 blockers never stop physics props))
+   ADD changed: add classname=env_physics_blocker origin=-2952 -60 -67 (BlockType 4 -> 0 (L4D1 blockers never stop physics props))
+cdta_03warehouse.cfg {'add': 59, 'add left out': 4, 'modify': 21, 'filter': 48}
+   ADD left out: add classname=logic_auto (stripped script/scavenge output; logic_auto has no outputs left in L4D1: left out)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=3723371: dropped delete OnTrigger "director,BeginScript,cdta03_passive,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=randomgate: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=randomgate2: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD changed: add classname=weapon_item_spawn origin=-3493 -7367 250.5 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=weapon_item_spawn origin=-2620 -6795 162.5 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=weapon_item_spawn origin=1876 -10206 84 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=weapon_item_spawn origin=3030 -11849 152 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=1632364: 1 already weapon_pumpshotgun_spawn in the conversion
+   ADD changed: add classname=weapon_spawn origin=-656 -8489 348 (weapon_spawn -> weapon_smg_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=2051938: 1 already weapon_smg_spawn in the conversion
+   ADD changed: add classname=weapon_spawn origin=1148 -10670 -17 (weapon_spawn -> weapon_pumpshotgun_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=3563913: 1 already weapon_molotov_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=3563915: 1 -> weapon_molotov_spawn
+   ADD left out: add classname=trigger_multiple origin=1137 -10768 134 targetname=no_fall_damage_a (dropped output OnStartTouch "!activator,IgnoreFallDamageWithoutReset,10,0,-1" (VScript or an input L4D1 does not have); trigger_multiple has no outputs left in L4D1: left out)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=falldamage: dropped insert OnStartTouch "!activator,IgnoreFallDamageWithoutReset,10,0,-1" (VScript or an input L4D1 does not have); dropped delete OnTouching "!activator,IgnoreFallDamageWithoutReset,,10,-1" (VScript or an input L4D1 does not have)
+   ADD left out: add classname=point_nav_attribute_region targetname=nav_fix_obscured_remove01 origin=-4880 -6248 348 (point_nav_attribute_region has no L4D1 class: left out)
+   ADD left out: add classname=point_nav_attribute_region targetname=nav_fix_obscured_remove02 origin=-400 -7296 340 (point_nav_attribute_region has no L4D1 class: left out)
+cdta_04onarail.cfg {'modify': 13, 'filter': 40, 'add': 89}
+   MODIFY L4D2 1 vs L4D1 1: modify classname=trigger_once origin=-10708 2584 780: dropped delete OnTrigger "director,BeginScript,cdta04_passive,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=boxcarpath5: dropped delete OnPass "director,BeginScript,cdta04_passive,15,-1" (VScript or an input L4D1 does not have); dropped insert OnPass "director,EndScript,,15,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=1243799: 1 already weapon_pumpshotgun_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=1243775: 1 -> weapon_smg_spawn
+   ADD changed: add classname=weapon_item_spawn origin=-2510 3297 962 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=weapon_item_spawn origin=4315 3109 968 (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=env_physics_blocker origin=-5168 2142 733 (rotated blocker (angles 0 45 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-5115 1723 1088 (rotated blocker (angles 0 -18 0): split by blocker-angles)
+cdta_05finalroad.cfg {'modify': 6, 'add': 44, 'add left out': 1, 'filter': 9}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=relay_versus: dropped delete OnTrigger "director,BeginScript,cdta_05finalroadversus,0,-1" (VScript or an input L4D1 does not have)
+   ADD left out: add classname=logic_timer targetname=tank_spawned_timer (stripped script/scavenge output; logic_timer has no outputs left in L4D1: left out)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=tanktrigger1 classname=trigger_once origin=-11168.6 -13736.9 1189: dropped delete OnTrigger "radio,GauntletStopPanic,,0,-1" (VScript or an input L4D1 does not have)
+cwm1_intro.cfg {'add': 78, 'add left out': 1}
+   ADD changed: add classname=env_physics_blocker targetname=eb_fix01 origin=3144 3848 120 (BlockType 4 -> 0 (L4D1 blockers never stop physics props))
+   ADD changed: add classname=env_physics_blocker targetname=eb_fix_large_displacement origin=3072 2008 120 (BlockType 4 -> 0 (L4D1 blockers never stop physics props))
+   ADD left out: add classname=logic_auto (stripped script/scavenge output; logic_auto has no outputs left in L4D1: left out)
+   ADD changed: add classname=env_physics_blocker origin=1526.52 -3169.35 696 (rotated blocker (angles 0 77.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3052 2852 745.5 (rotated blocker (angles 0 -4 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2984 2848 745.5 (rotated blocker (angles 0 -4 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2916 2844 745.5 (rotated blocker (angles 0 5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1327.27 3011.92 696 (rotated blocker (angles 0 -23 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1659.5 2836.5 779 (rotated blocker (angles 0 59 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3618.34 -3455.38 704 (rotated blocker (angles 0 5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3743.56 -3433.34 704 (rotated blocker (angles 0 15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3860.65 -3390.33 704 (rotated blocker (angles 0 25.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3969.5 -3331 704 (rotated blocker (angles 0 34 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4067.71 -3248.08 704 (rotated blocker (angles 0 44.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4149.5 -3154 704 (rotated blocker (angles 0 53 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4215.17 -3048.08 704 (rotated blocker (angles 0 63 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4262.74 -2929.72 704 (rotated blocker (angles 0 74 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4288.3 -2805.8 704 (rotated blocker (angles 0 83.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4161 -2415 696 (rotated blocker (angles 0 22 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2116.24 1578.6 672 (rotated blocker (angles 0 -5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2448.34 1682.05 697 (rotated blocker (angles 0 -16.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2619.65 1982.57 760 (rotated blocker (angles 0 -15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2552.35 1731.43 760 (rotated blocker (angles 0 -15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2405.37 1905.4 760 (rotated blocker (angles 0 -15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2766.63 1808.6 760 (rotated blocker (angles 0 -15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-3001 9620 324 (rotated blocker (angles 0 17 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-2925 9197 324 (rotated blocker (angles 0 10 0): split by blocker-angles)
+cwm2_warehouse.cfg {'modify': 3, 'add': 73, 'add left out': 2, 'filter': 2}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=glow_trigger: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD changed: add classname=env_physics_blocker origin=1100 -776 464 (rotated blocker (angles 0 -15 0): split by blocker-angles)
+   ADD left out: add classname=script_nav_blocker origin=4272 152 256 targetname=warehouse_nav_skip_blocker (script_nav_blocker has no L4D1 class: left out)
+   ADD changed: add classname=env_physics_blocker origin=8416 4425 82 (rotated blocker (angles 0 0 5.5): split by blocker-angles)
+   ADD left out: add classname=logic_auto (stripped script/scavenge output; logic_auto has no outputs left in L4D1: left out)
+   ADD changed: add classname=env_physics_blocker origin=4129.3 622.67 96 (rotated blocker (angles 0 349 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3830 91 289 (rotated blocker (angles 0 10 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4643.86 880.8 884.5 (rotated blocker (angles 0 7 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4624.6 1037.62 832 (rotated blocker (angles 0 7 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4971.36 1480.98 832 (rotated blocker (angles 0 7 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=4990.89 1334.27 912 (rotated blocker (angles 0 7 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=8622.93 5533.07 257.5 (rotated blocker (angles 0 150 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=8622 5534 371 (rotated blocker (angles 0 150 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-1575 -2096 200 (rotated blocker (angles 0 45 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-1575 -2122 200 (rotated blocker (angles 0 -45 0): split by blocker-angles)
+cwm3_drain.cfg {'add': 78, 'filter': 9, 'modify': 2}
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=358199: 1 -> weapon_pumpshotgun_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=358212: 1 -> weapon_smg_spawn
+   ADD changed: add classname=env_physics_blocker targetname=EB002 origin=504 128 256 (rotated blocker (angles 0 55 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1427.14 -2104.04 760 (rotated blocker (angles 0 2.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1432.28 -2020.43 760 (rotated blocker (angles 0 -3 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1435.72 -1840.04 760 (rotated blocker (angles 0 1.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=1427.38 -1735.84 760 (rotated blocker (angles 0 7.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2534.5 -2476.51 936 (rotated blocker (angles 0 244.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=2852 -2598 178 (rotated blocker (angles 0 -10 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3797.5 -2097.5 936 (rotated blocker (angles 0 66.5 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=3911.5 -1775.5 936 (rotated blocker (angles 0 336 0): split by blocker-angles)
+cwm4_building.cfg {'modify': 8, 'add': 14, 'add left out': 1}
+   MODIFY L4D2 54 vs L4D1 0: modify classname=weapon_item_spawn: 21 have no L4D1 item left: filtered; 3 -> weapon_ammo_spawn; 16 have no L4D1 item left: filtered; 1 -> weapon_pain_pills_spawn; 8 already weapon_ammo_spawn in the conversion; 1 -> weapon_ammo_spawn; 3 -> weapon_pain_pills_spawn; 1 already weapon_first_aid_kit_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=trigger_stopgauntlet: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD left out: add targetname=tank_spawned_timer origin=284.567841 668.269165 1506.031250 classname=logic_timer (stripped script/scavenge output; logic_timer has no outputs left in L4D1: left out)
+   ADD changed: add classname=env_physics_blocker origin=27 -232 942 (rotated blocker (angles 33 0 0): split by blocker-angles)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209182: 1 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209184: 1 -> weapon_pumpshotgun_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209196: 1 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209194: 1 -> weapon_pumpshotgun_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209206: 1 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=209208: 1 -> weapon_pumpshotgun_spawn
+   ADD changed: add classname=env_physics_blocker origin=255.82 818.73 1152.5 (rotated blocker (angles 0 333 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-525.5 814.73 1153.5 (rotated blocker (angles 0 202 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=13 806 960.5 (rotated blocker (angles 0 15 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-393.13 800.96 960.5 (rotated blocker (angles 0 310.5 0): split by blocker-angles)
+hf01_theforest.cfg {'filter': 18, 'add': 52, 'modify': 24}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=relay_intro_start: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD changed: add classname=env_physics_blocker origin=-12231.3 10271 388 (rotated blocker (angles 0 25 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-5631.2 6817.25 536 (rotated blocker (angles 0 18 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-10247.7 4942.73 66 (rotated blocker (angles 0 60 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-10166.3 5104.7 71 (rotated blocker (angles 0 66 0): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker origin=-10166.3 5104.7 84 (rotated blocker (angles 0 66 0): split by blocker-angles)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=traintunnel_light_timer: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+hf02_thesteeple.cfg {'filter': 21, 'add': 11, 'modify': 2}
+   FILTER L4D2 3 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn
+   MODIFY L4D2 38 vs L4D1 0: modify classname=weapon_item_spawn: 2 -> weapon_pain_pills_spawn; 11 already weapon_pain_pills_spawn in the conversion; 2 -> weapon_pipe_bomb_spawn; 5 already weapon_molotov_spawn in the conversion; 2 -> weapon_molotov_spawn; 2 -> weapon_pain_pills_spawn; 3 already weapon_pipe_bomb_spawn in the conversion; 1 already weapon_first_aid_kit_spawn in the conversion; 4 -> weapon_pain_pills_spawn; 2 -> weapon_pain_pills_spawn; 2 -> weapon_pain_pills_spawn; 2 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify classname=trigger_once origin=-7367 -5539 -480: dropped delete OnStartTouch "director,BeginScript,hf02_rolling_tunnel,3,-1" (VScript or an input L4D1 does not have); dropped insert OnStartTouch "director,BeginScript,hf02_thesteeple_rolling_tunnel_promod,3,-1" (VScript or an input L4D1 does not have)
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter origin=-3931 -7757 -319 classname=weapon_item_spawn
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter origin=-4186.33 -8089.94 -376 classname=weapon_item_spawn
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter origin=-3612.73 -7795.28 -376 classname=weapon_item_spawn
+hf03_themansion.cfg {'filter': 12, 'add': 2, 'modify': 1}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=relay_piano: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter origin=-3067.74 897.31 448 classname=weapon_item_spawn
+hf04_escape.cfg {'modify': 8, 'add': 32, 'add left out': 4}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=relay_escape_ends: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 3 vs L4D1 0: modify classname=weapon_spawn: 3 -> weapon_pumpshotgun_spawn
+   MODIFY L4D2 2 vs L4D1 0: modify classname=weapon_spawn: 2 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify origin=3 -1930 -642.5 classname=trigger_once: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD left out: add targetname=tank_spawned_timer origin=-217.643219 2641.622803 -701.968750 classname=logic_timer (stripped script/scavenge output; logic_timer has no outputs left in L4D1: left out)
+   ADD left out: add targetname=tank_spawned_timer_2 origin=-217.643219 2641.622803 -601.968750 classname=logic_timer (stripped script/scavenge output; logic_timer has no outputs left in L4D1: left out)
+   MODIFY L4D2 39 vs L4D1 0: modify classname=weapon_item_spawn: 15 already weapon_pain_pills_spawn in the conversion; 11 have no L4D1 item left: filtered; 5 have no L4D1 item left: filtered; 1 have no L4D1 item left: filtered; 1 already prop_physics in the conversion; 4 already prop_physics in the conversion; 2 already prop_physics in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify classname=info_gamemode: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD left out: add origin=85 -10520 -820 model=models/deadbodies/default/oval_192_b_burnt.mdl classname=prop_dynamic (model models/deadbodies/default/oval_192_b_burnt.mdl not found in any L4D1/pack/campaign VPK: left out)
+   ADD left out: add origin=40 -10700 -820 model=models/deadbodies/default/oval_192_b_burnt.mdl classname=prop_dynamic (model models/deadbodies/default/oval_192_b_burnt.mdl not found in any L4D1/pack/campaign VPK: left out)
+   ADD changed: add origin=-60 -1461 -620 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=-70 -1461 -620 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=-65 -1451 -620 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+x1m1_cliffs.cfg {'filter': 11, 'add': 7, 'modify': 8}
+   ADD changed: add classname=weapon_spawn origin=-819.853 442.978 65 (weapon_spawn -> weapon_smg_spawn)
+   ADD changed: add classname=weapon_spawn origin=-865 462 67 (weapon_spawn -> weapon_pumpshotgun_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=paniikki_ovi: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=82726: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=95446: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=95520: 1 already weapon_pain_pills_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=97199: 1 already weapon_pain_pills_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=case_jaska: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   ADD changed: add classname=weapon_smg_silenced_spawn targetname=zm_smg origin=-976 448 65 (weapon_smg_silenced_spawn -> weapon_smg_spawn)
+   ADD changed: add classname=weapon_shotgun_chrome_spawn targetname=zm_shotgun origin=-939 448 65 (weapon_shotgun_chrome_spawn -> weapon_pumpshotgun_spawn)
+x1m2_path.cfg {'add': 63, 'filter': 26}
+   ADD changed: add origin=3248.285889 6294.582520 -36.968750 classname=weapon_spawn (weapon_spawn -> weapon_rifle_spawn)
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter hammerid=58296 classname=weapon_item_spawn
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter hammerid=58294 classname=weapon_item_spawn
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn origin=-748.994 8805.24 -408
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn origin=-1178 8899 -375.025
+   FILTER L4D2 1 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn origin=-1178 8915 -375
+   ADD changed: add origin=6614.039063 8210.058594 -787.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=7040.612305 8710.721680 -873.969238 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=5992.031250 8895.026367 -985.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=6503.031250 10875.968750 -711.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=2032.773804 10401.822266 -300.591461 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+x1m3_city.cfg {'filter': 53, 'modify': 12, 'add': 30, 'add left out': 2}
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=266279: 1 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=266291: 1 already weapon_pumpshotgun_spawn in the conversion
+   ADD changed: add classname=weapon_spawn origin=-2689.01 9567.49 -395 (weapon_spawn -> weapon_smg_spawn)
+   ADD changed: add classname=weapon_spawn origin=-2649 9582 -395 (weapon_spawn -> weapon_pumpshotgun_spawn)
+   ADD left out: add classname=weapon_melee_spawn origin=-2755.1 9528.39 -395 model=models/weapons/melee/w_frying_pan.mdl (dropped weapon_melee_spawn)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=167219: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 2 vs L4D1 2: modify targetname=paniikki_ovi: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=675013: 1 already weapon_pain_pills_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=272102: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=473141: 1 -> weapon_pain_pills_spawn
+   ADD left out: add classname=logic_auto (stripped script/scavenge output; logic_auto has no outputs left in L4D1: left out)
+x1m4_forest.cfg {'filter': 25, 'add': 15, 'modify': 6}
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=328332: 1 already weapon_pipe_bomb_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=328334: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=659250: 1 already weapon_pain_pills_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=659252: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=676683: 1 -> weapon_pain_pills_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=676687: 1 -> weapon_pain_pills_spawn
+x1m5_salvation.cfg {'filter': 3, 'add': 8}
+   FILTER L4D2 11 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn
+   ADD changed: add origin=7148 -2875 -1047 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=7158 -2875 -1047 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=7148 -2865 -1047 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=7158 -2865 -1047 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+l4d2_diescraper1_apartment_361.cfg {'modify': 3, 'filter': 4}
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=alarmcar_case: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=blackout_relay: dropped delete OnTrigger "blackout_query,HowAngry,,4.5,-1" (VScript or an input L4D1 does not have)
+l4d2_diescraper2_streets_361.cfg {'modify': 5, 'filter': 6, 'add': 2}
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=432636: 1 already weapon_pipe_bomb_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=633746: 1 already weapon_molotov_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=108650: dropped delete OnTrigger "director,BeginScript,diescraper2_onslaught3,4.5,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=alarmcar_case: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=howitzer_button: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+l4d2_diescraper3_mid_361.cfg {'filter': 5, 'modify': 9, 'add': 6}
+   MODIFY L4D2 2 vs L4D1 2: modify classname=info_gamemode: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=gauntlet_coop: dropped delete OnTrigger "director,ScriptedPanicEvent,diescraper3_minifinale,8,-1" (VScript or an input L4D1 does not have); dropped insert OnTrigger "director,BeginScript,l4d2_diescraper3_mid_34_minifinale_promod,40,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=alarm_button2: dropped delete OnIn "director,EndCustomScriptedStage,,1,-1" (VScript or an input L4D1 does not have); dropped insert OnIn "director,EndScript,,1,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=622021: dropped delete OnStartTouch "director,BeginScript,diescraper3_climb_chase,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=843008: dropped delete OnStartTouch "director,BeginScript,diescraper_quiet,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 0 vs L4D1 0: modify hammerid=1132163: matches nothing in L4D2 either; dropped delete OnStartTouch "director,BeginScript,diescraper_noboss,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=elevator_arrival_relay: dropped delete OnTrigger "director,BeginScript,diescraper_noboss,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify targetname=maze_case_vs: outputs rewritten for L4D1 (comma separators, L4D1 input names)
+l4d2_diescraper4_top_361.cfg {'modify': 10, 'filter': 14, 'add': 20}
+   MODIFY L4D2 5 vs L4D1 5: modify classname=logic_auto: dropped delete OnMapSpawn "director,BeginScript,diescraper_noboss,0,-1" (VScript or an input L4D1 does not have)
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=625294: 1 -> weapon_smg_spawn
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=625290: 1 already weapon_rifle_spawn in the conversion
+   MODIFY L4D2 1 vs L4D1 1: modify hammerid=625292: 1 -> weapon_pumpshotgun_spawn
+   FILTER L4D2 30 vs L4D1 0: rewritten by hammerid: filter classname=weapon_item_spawn
+   FILTER L4D2 4 vs L4D1 8: rewritten by hammerid: filter classname=weapon_first_aid_kit_spawn
+   FILTER L4D2 15 vs L4D1 29: rewritten by hammerid: filter classname=weapon_pain_pills_spawn
+   ADD changed: add origin=654.123901 -152.520554 -21.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=609.409912 -136.474899 -21.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=563.985474 -157.353165 -21.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add origin=635.429016 -142.061844 -21.968750 classname=weapon_item_spawn (weapon_item_spawn -> weapon_pain_pills_spawn)
+   ADD changed: add classname=env_physics_blocker targetname=stair_svv_clipwall_02 origin=-160 -16 -320 (rotated blocker (angles 0 0 55): split by blocker-angles)
+   ADD changed: add classname=env_physics_blocker targetname=stair_svv_clipwall_04 origin=-232 64 -312 (rotated blocker (angles -31 0 0): split by blocker-angles)

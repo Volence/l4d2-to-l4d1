@@ -156,3 +156,16 @@ An empty L4D1 server hibernates and stops running timers, so scripts drive it ov
   `wine ./spcomp.exe flowdump.sp -o flowdump.smx -iinclude`)
 - `make-test-server.sh`, `rcon.py`: the isolated test server and a minimal rcon client
 - `bspinfo.py`, `nav.py`, `vpkread.py`: readers
+
+## Comp Rework stripper port (compstripper/)
+
+`compstripper/port.sh <L4D2-Competitive-Rework checkout> <work dir>` ports SirPlease's zonemod stripper cfgs for
+Detour Ahead, Carried Off, Haunted Forest, Open Road (maps 1-5; there is no x1m6 cfg) and Diescraper (_361)
+onto our conversions. `stripper2to1.py` checks every filter/modify match against both the original L4D2 BSP and
+the converted one; where the converter renamed a class (weapon_spawn, weapon_item_spawn) it rematches by hammerid
+and, for weapon_selection / itemN edits, converts the L4D2 entity again with the edit applied (same pick) and
+sets the L4D1 class. env_physics_blocker -> env_player_blocker (BlockType 4 -> 0: L4D1 blockers never stop
+props), VScript outputs and L4D2-only inputs (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
+IgnoreFallDamageWithoutReset, HowAngry) go, ForcePanicEvent -> PanicEvent. Every change is tagged `[L4D1]` in
+the cfg; report.txt lists them. `stripcheck.py <cfg> <stripper_dump file>` verifies a cfg against the lump the
+server spawned (all 22 clean on /home/volence/l4d1-striptest, port 27105, 2026-10-21). No CCR cfg exists upstream.
