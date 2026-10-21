@@ -257,7 +257,9 @@ def translate_add(pairs, notes):
     kv = {k.lower(): v for k, v in pairs}
     cls = kv.get('classname', '')
     if cls in NO_L4D1_CLASS:
-        notes.append(f'{cls} has no L4D1 class: left out')
+        notes.append(f'{cls} has no L4D1 class: left out'
+                     + ('; compstripper.py writes its attribute change into the nav file (navfix.py)'
+                        if cls == 'point_nav_attribute_region' else ''))
         return None
     if cls == 'env_physics_blocker':
         bt = kv.get('blocktype', '0')

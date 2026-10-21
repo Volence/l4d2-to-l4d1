@@ -8,17 +8,21 @@ stripper2to1.py ports it against out/<name>/src/maps/<map>.bsp (the L4D2 origina
 generated header (flow, events, lost Director Scripts) and start-saferoom ammo from rotoblin.py are kept, and
 rotated blockers are split by deploy/tools/blocker-angles. The result replaces out/<name>/rotoblin/stripper/<map>.cfg
 and the port report goes to out/<name>/rotoblin/compstripper.txt. Maps without an upstream cfg keep rotoblin.py's.
-convert.py runs this after rotoblin.py; run it alone to refresh a campaign when upstream changes.
+Upstream's nav fixes (scripts/vscripts/nav_fixes/<map>_navfixes.nut, VScript) and the cfg's point_nav_attribute_region
+entities go straight into out/<name>/pkg/maps/<map>.nav through navfix.py (idempotent); a standalone run then repacks the
+VPK. convert.py runs this after rotoblin.py; run it alone to refresh a campaign when upstream changes.
 """
 import glob, math, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import rotoblin, stripper2to1
+import navfix, rotoblin, stripper2to1
 
 UPSTREAM = os.path.join(HERE, 'upstream', 'L4D2-Competitive-Rework')
 UPSTREAM_URL = 'https://github.com/SirPlease/L4D2-Competitive-Rework.git'
 MAPS = os.path.join(UPSTREAM, 'cfg', 'stripper', 'zonemod', 'maps')
+NAVFIXES = os.path.join(UPSTREAM, 'scripts', 'vscripts', 'nav_fixes')
+VENV = os.path.join(HERE, '.venv')
 BLOCKER_ANGLES = '/home/volence/l4d/deploy/tools/blocker-angles/blocker_angles.py'
 L4D1 = os.path.expanduser('~/.local/share/Steam/steamapps/common/left 4 dead')
 # Models a ported cfg may use: stock L4D1, the L4D2 pack every player installs, and the campaign itself.
@@ -61,7 +65,7 @@ def has_ammo_near(cfg, p):
     return False
 
 
-def port_campaign(name, rev, models_ok):
+def port_campaign(name, rev, models_ok, repack=False):
     work = os.path.join(HERE, 'out', name)
     outdir = os.path.join(work, 'rotoblin', 'stripper')
     gendir = os.path.join(work, 'rotoblin', 'generated')  # rotoblin.py's cfgs, kept for their headers
@@ -77,7 +81,7 @@ def port_campaign(name, rev, models_ok):
         p = os.path.join(outdir, m + '.cfg')
         if os.path.exists(p) and not ported(m):
             shutil.copyfile(p, os.path.join(gendir, m + '.cfg'))
-    ported, report = [], []
+    ported, report, nav_changed = [], [], []
     for bsp in sorted(glob.glob(os.path.join(work, 'pkg', 'maps', '*.bsp'))):
         m = os.path.basename(bsp)[:-4]
         cfg = os.path.join(MAPS, m + '.cfg')
@@ -101,11 +105,28 @@ def port_campaign(name, rev, models_ok):
         ported.append(mine)
         report.append(f'{m}: {dict(stats)}')
         report += ['   ' + r for r in rep]
+        # Comp Rework's nav fixes are VScript (+ point_nav_attribute_region in the cfg): write them into the nav
+        nut = os.path.join(NAVFIXES, m + '_navfixes.nut')
+        ops = navfix.nut_ops(open(nut).read()) if os.path.exists(nut) else []
+        regions = navfix.cfg_regions(open(cfg, encoding='latin1').read())
+        navp = os.path.join(work, 'pkg', 'maps', m + '.nav')
+        if (ops or regions) and os.path.exists(navp):
+            old = open(navp, 'rb').read()
+            new, log = navfix.apply(old, ops, regions)
+            if new != old:
+                open(navp, 'wb').write(new)
+                nav_changed.append(m)
+            report += ['   nav: ' + l for l in log]
     if ported:
         r = subprocess.run([sys.executable, BLOCKER_ANGLES, '--cap', '96', '--write'] + ported,
                            capture_output=True, text=True, check=True)
         report += ['blocker-angles: ' + l for l in r.stdout.splitlines() if 'OVER TOL' in l or 'LEFT AS IS' in l
                    or 'rotated blockers' in l]
+    if nav_changed and repack:
+        vpk = os.path.join(work, f'{name}_l4d1.vpk')
+        subprocess.run([VENV + '/bin/python', '-c', 'import sys, vpk; p = vpk.new(sys.argv[1]); p.version = 1; p.save(sys.argv[2])',
+                        os.path.join(work, 'pkg'), vpk], check=True, cwd='/tmp')
+        report.append(f'nav fixes changed {", ".join(nav_changed)}: repacked {os.path.basename(vpk)}')
     open(os.path.join(work, 'rotoblin', 'compstripper.txt'), 'w').write(
         f'Comp Rework {rev}: {len(ported)} maps ported\n' + '\n'.join(report) + '\n')
     return ported, report
@@ -116,11 +137,12 @@ def model_checker(name):
     return lambda m: m.lower() in have
 
 
-def main(names, pull=True):
+def main(names, pull=True, repack=False):
+    """repack: rebuild the VPK when a nav fix changed a nav (standalone runs; under convert.py, dictbuild.sh repacks)."""
     rev = upstream(pull)
     out = []
     for name in names:
-        ported, _ = port_campaign(name, rev, model_checker(name))
+        ported, _ = port_campaign(name, rev, model_checker(name), repack)
         out.append(f'{name}: {len(ported)} maps ported from Comp Rework {rev}')
     return out
 
@@ -129,4 +151,4 @@ if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     if not args:
         sys.exit(__doc__)
-    print('\n'.join(main(args, pull='--no-pull' not in sys.argv)))
+    print('\n'.join(main(args, pull='--no-pull' not in sys.argv, repack=True)))

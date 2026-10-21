@@ -171,6 +171,11 @@ it (`stripverify.sh`, after dictbuild.sh; `--no-verify` skips). Rerun alone with
   VScript outputs and L4D2-only inputs go (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
   IgnoreFallDamageWithoutReset, HowAngry: L4D1 cannot ignore fall damage at all); ForcePanicEvent -> PanicEvent.
   Every change is tagged `[L4D1]` in the cfg; out/<name>/rotoblin/compstripper.txt lists them.
+- Nav fixes: upstream's scripts/vscripts/nav_fixes/<map>_navfixes.nut (VScript ConnectTo/Disconnect on nav area IDs)
+  and the cfg's point_nav_attribute_region boxes (spawnflags 4096 = OBSCURED) are written into pkg/maps/<map>.nav by
+  `navfix.py` (direction from CNavArea::ComputeDirection, idempotent); a standalone compstripper.py run repacks the VPK.
+  2026-10-21: CO 1 (22 links), CO 2 (12), DA 3 (1 link, 2 cuts, OBSCURED off 45 areas), Open Road 3 (3).
+  CO 2's script_nav_blocker (survivor bots only) has no L4D1 equivalent without a brush and is left out.
 - compstripper.py keeps rotoblin.py's header (flow, events, lost Director Scripts) from rotoblin/generated/ and its
   start ammo pile unless the port already has one near info_player_start, then splits rotated blockers with
   deploy/tools/blocker-angles (`--cap 96`).
