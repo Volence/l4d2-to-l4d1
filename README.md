@@ -26,6 +26,10 @@ pack, whatever its `zz_`/`00_` prefix), the L4D2 install (to pull missing assets
 classes L4D1 knows). Paths are at the top of `convert.py`. The first run builds `out/.index.pkl`;
 delete it after installing new packs.
 
+Because files the pack already has are left out, players need the pack as well as the campaign.
+After publishing a converted campaign on the site, tick **Needs the L4D2 pack** on its card in
+Admin > Setup > Campaigns so the public campaigns page tells players.
+
 First converted: **Crash Course ReRouted** (gamemaps 28094, author MK gave the owner permission),
 2026-10-08. All 5 maps boot on a server, and maps 1-4 have been played in the client.
 
