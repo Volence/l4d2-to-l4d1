@@ -26,6 +26,7 @@ L4D1_SERVER_SO = '/home/volence/l4d1-ds/server/left4dead/bin/server.so'
 # L4D2 models that crash the L4D1 client (studiorender.dll access violation, 2026-10-08, CCR map 1).
 DEFAULT_DROP = ('models/deadbodies/',)
 VENV = os.path.join(HERE, '.venv')
+CONSISTENCY_CFG = '/home/volence/l4d/pug/consistency/configs/l4d_consistency.cfg'  # the site uploader's list
 
 
 def vpk_index(path):
@@ -217,16 +218,27 @@ def main():
     # ---- campaign's own files (minus Hammer leftovers) -------------------------------------------
     # sound/sound.cache is the game's own precache index; an addon copy replaces the player's for every map
     skip = re.compile(r'\.(vmf|vmx|log|prt|lin|jpg|bak)$|^maps/.*\.(vtf|bmp)$|^scripts/vscripts/|^sound/sound\.cache$', re.I)
-    shadows = []
+    # Files the servers enforce for consistency (pug's l4d_consistency.cfg, the list the site's uploader checks):
+    # a campaign copy would drop every player on its maps, and the uploader refuses the VPK. Players have their own.
+    enforced = {l.strip().lower() for l in open(CONSISTENCY_CFG, encoding='latin1')
+                if l.strip() and not l.strip().startswith('#')}
+    shadows, enforced_hit = [], []
     for root, _, fs in os.walk(src_dir):
         for fn in fs:
             rel = os.path.relpath(os.path.join(root, fn), src_dir).replace('\\', '/').lower()
             if skip.search(rel) or rel.startswith('maps/') or not '/' in rel:
                 continue
+            if rel in enforced:
+                enforced_hit.append(rel)
+                continue
             if rel in have:
                 shadows.append(rel)
             out = os.path.join(pkg, rel); os.makedirs(os.path.dirname(out), exist_ok=True)
             shutil.copy(os.path.join(root, fn), out)
+    if enforced_hit:
+        say(f'-- left out {len(enforced_hit)} files the servers enforce for consistency (players keep their own):')
+        for f in sorted(enforced_hit):
+            say('   ' + f)
     if shadows:  # kept (the author changed them on purpose), but they apply to every map while installed
         say(f'!! {len(shadows)} files replace ones players already have (stock or our pack), on every map:')
         for f in sorted(shadows):
