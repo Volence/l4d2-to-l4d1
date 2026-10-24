@@ -12,10 +12,12 @@ nothing): one PanicEvent spawned 50 commons and ended; with director_panic_forev
 becomes: PanicEvent + director_panic_forever 1 where the map began the script, director_panic_forever 0
 where it ended it. The director still picks the spawn spots, so nothing is hand placed.
 
-Two engine rules shape the entities (L4D1 server, see ~/l4d/source InputPanicEvent / OnMapInvokedPanicEvent):
-- A map PanicEvent is refused for 90 s after the last one. The event's own panic often fired seconds earlier,
-  so a retry timer fires PanicEvent every 5 s for the first 95 s; with panic_forever on, the first one the
-  director accepts starts a panic that never ends, and one already running is simply kept going.
+What shapes the entities:
+- One PanicEvent at the start, nothing more. A PanicEvent while a panic runs RESTARTS it (log: StartPanicEvent,
+  ClearPendingMobCount "All mobs cleared", STAGE_INITIAL_DELAY, and the mega mob scream again): a 5 s retry
+  timer, first written for a 90 s map panic cooldown read in the server source, made Carried Off 2 scream every
+  ~5 s in the owner's test 2026-10-23 and was removed. If the map's own panic fired just before, the director
+  either takes ours (one more scream) or keeps the running one; panic_forever keeps whichever goes on.
 - director_panic_forever is a cheat cvar: plain `director_panic_forever 1` is refused with sv_cheats 0, but
   `sm_cvar` sets it (checked on the rig with sv_cheats 0), so a point_servercommand sends sm_cvar.
 
@@ -47,9 +49,10 @@ TABLE = {
                         'hf02_rolling_tunnel (Comp: _promod): the tunnel alarm until the button that stops it'),
     'l4d2_diescraper2_streets_361': ('diescraper', (881077, 'OnTrigger', 1.5), (652799, 'OnIn', 0),
                                      'diescraper2_onslaught1_vs + _2_vs: lobby door (lobby_panic_vs) until alarm_button2'),
-    'l4d2_diescraper3_mid_361': ('diescraper', (1089328, 'OnTrigger', 40), (843176, 'OnIn', 1),
-                                 'diescraper3_minifinale (Comp: _mid_34_minifinale_promod at 40 s): generator '
-                                 '(gauntlet_coop) until alarm_button2 (spawned by alarm_button_template)'),
+    'l4d2_diescraper3_mid_361': ('diescraper', (1089328, 'OnTrigger', 8), (843176, 'OnIn', 1),
+                                 'diescraper3_minifinale: generator (gauntlet_coop) until alarm_button2 (spawned by '
+                                 'alarm_button_template); on with the lever\'s own 8 s panic, not at Comp\'s 40 s '
+                                 '_promod: the 40 s start restarted that panic and felt weak (owner, 2026-10-23)'),
 }
 # Left alone on purpose: Comp Rework filters out the trigger that started these, so they stay gone.
 #   x1m3_city x1m3_endrun (scriptitrigger, "Remove crow hordes"), x1m4_forest x1m4_ambush (korribeep1-3).
@@ -64,17 +67,13 @@ def block(m):
     camp, start, end, note = TABLE[m]
     cmd = f'{PREFIX}_cmd,Command,sm_cvar director_panic_forever'
     lines = [BEGIN, f'; {note}', '; See l4d2to1/onslaught.py: PanicEvent + director_panic_forever 1 at the start,',
-             '; 0 at the end and at every round start; a 5 s PanicEvent retry rides out the 90 s map panic cooldown.',
+             '; 0 at the end and at every round start.',
              'add:',
              '{', '\t"classname" "point_servercommand"', f'\t"targetname" "{PREFIX}_cmd"', '}',
-             '{', '\t"classname" "logic_timer"', f'\t"targetname" "{PREFIX}_retry"', '\t"StartDisabled" "1"',
-             '\t"RefireTime" "5"', '\t"OnTimer" "director,PanicEvent,,0,-1"', '}',
              '{', '\t"classname" "logic_relay"', f'\t"targetname" "{PREFIX}_on"',
-             f'\t"OnTrigger" "{cmd} 1,0,-1"', '\t"OnTrigger" "director,PanicEvent,,0.1,-1"',
-             f'\t"OnTrigger" "{PREFIX}_retry,Enable,,0.1,-1"', f'\t"OnTrigger" "{PREFIX}_retry,Disable,,95,-1"', '}',
+             f'\t"OnTrigger" "{cmd} 1,0,-1"', '\t"OnTrigger" "director,PanicEvent,,0.1,-1"', '}',
              '{', '\t"classname" "logic_relay"', f'\t"targetname" "{PREFIX}_off"',
-             f'\t"OnTrigger" "{cmd} 0,0,-1"', f'\t"OnTrigger" "{PREFIX}_retry,Disable,,0,-1"',
-             f'\t"OnTrigger" "{PREFIX}_on,Disable,,0,-1"', '}',
+             f'\t"OnTrigger" "{cmd} 0,0,-1"', f'\t"OnTrigger" "{PREFIX}_on,Disable,,0,-1"', '}',
              '{', '\t"classname" "logic_auto"',
              f'\t"OnMapSpawn" "{cmd} 0,0,-1"', f'\t"OnMultiNewRound" "{cmd} 0,0,-1"', '}',
              'modify:']
