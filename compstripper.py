@@ -29,6 +29,9 @@ L4D1 = os.path.expanduser('~/.local/share/Steam/steamapps/common/left 4 dead')
 # Models a ported cfg may use: stock L4D1, the L4D2 pack every player installs, and the campaign itself.
 MODEL_SOURCES = [f'{L4D1}/left4dead/pak01_dir.vpk', f'{L4D1}/left4dead_dlc3/pak01_dir.vpk'] + \
     sorted(glob.glob(f'{L4D1}/left4dead/addons/*l4d2maps_*.vpk'))
+# L4D2 particle systems whose renderer L4D1 lacks: the client logs "C_OP_RenderSprites::RenderUnsorted: Attempting to
+# use an unimplemented sprite renderer for system ..." every frame (owner's console on Diescraper 1, 2026-10-24).
+L4D1_UNDRAWABLE_PARTICLES = {'smoke_exhaust_01'}
 START_AMMO_RADIUS = 700  # a ported ammo pile this close to info_player_start makes rotoblin.py's one redundant
 
 
@@ -103,6 +106,14 @@ def port_campaign(name, rev, models_ok, repack=False):
         if ammo and start and not has_ammo_near(body, start):
             tail = '\n\n; --- [L4D1] start saferoom ammo pile (the conversion has none near info_player_start)\n' + ammo + '\n'
         open(mine, 'w', encoding='latin1').write('\n'.join(intro + head) + '\n' + body.rstrip('\n') + tail + '\n')
+        dead_fx = sorted({kv.get('effect_name') for kv in stripper2to1.load_ents(bsp) if kv.get('classname') == 'info_particle_system'
+                          and kv.get('effect_name') in L4D1_UNDRAWABLE_PARTICLES})
+        if dead_fx:  # the L4D1 client cannot draw these: console spam every frame, nothing on screen
+            with open(mine, 'a', encoding='latin1') as fh:
+                fh.write('\n; --- [L4D1] particle systems the L4D1 client cannot render ("Attempting to use an unimplemented'
+                         ' sprite renderer"), every frame\nfilter:\n' + ''.join(
+                             f'{{\n\t"classname" "info_particle_system"\n\t"effect_name" "{fx}"\n}}\n' for fx in dead_fx))
+            report.append(f'{m}: filtered undrawable particles {", ".join(dead_fx)}')
         if m in onslaught.TABLE:  # the L4D2 onslaughts VScript ran, rebuilt with director_panic_forever
             onslaught.apply(mine, m)
             report.append(f'{m}: onslaught rebuilt ({onslaught.TABLE[m][3]})')
