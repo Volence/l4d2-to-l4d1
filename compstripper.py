@@ -17,7 +17,7 @@ import glob, math, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import navfix, onslaught, rotoblin, stripper2to1
+import navblock, navfix, onslaught, rotoblin, stripper2to1
 
 UPSTREAM = os.path.join(HERE, 'upstream', 'L4D2-Competitive-Rework')
 UPSTREAM_URL = 'https://github.com/SirPlease/L4D2-Competitive-Rework.git'
@@ -114,6 +114,17 @@ def port_campaign(name, rev, models_ok, repack=False):
                          ' sprite renderer"), every frame\nfilter:\n' + ''.join(
                              f'{{\n\t"classname" "info_particle_system"\n\t"effect_name" "{fx}"\n}}\n' for fx in dead_fx))
             report.append(f'{m}: filtered undrawable particles {", ".join(dead_fx)}')
+        navp = os.path.join(work, 'pkg', 'maps', m + '.nav')
+        done = open(mine, encoding='latin1').read()
+        saferoom_blocks = [(n, h, c) for n, h, c in (navblock.checkpoint_blockers(bsp, navp) if os.path.exists(navp) else [])
+                           if f'"targetname" "{n}"' not in done and f'"hammerid" "{h}"' not in done]
+        if saferoom_blocks:  # half 2 would have no flow (navblock.py)
+            with open(mine, 'a', encoding='latin1') as fh:
+                fh.write('\n; --- [L4D1] nav blockers over a saferoom: L4D1 rebuilds saferoom areas on every round restart and'
+                         ' skips blocked ones,\n; so from half 2 on the map has no end area and no flow (no boss spawns)'
+                         '. L4D2\'s affectsFlow 0 does not exist here.\nfilter:\n' + ''.join(
+                             f'{{\n\t"hammerid" "{h}"\n}}\n' for n, h, c in saferoom_blocks))
+            report.append(f'{m}: filtered saferoom nav blockers ' + ', '.join(f'{n} ({c} areas)' for n, h, c in saferoom_blocks))
         if m in onslaught.TABLE:  # the L4D2 onslaughts VScript ran, rebuilt with director_panic_forever
             onslaught.apply(mine, m)
             report.append(f'{m}: onslaught rebuilt ({onslaught.TABLE[m][3]})')
