@@ -10,13 +10,14 @@ rotated blockers are split by deploy/tools/blocker-angles. The result replaces o
 and the port report goes to out/<name>/rotoblin/compstripper.txt. Maps without an upstream cfg keep rotoblin.py's.
 Upstream's nav fixes (scripts/vscripts/nav_fixes/<map>_navfixes.nut, VScript) and the cfg's point_nav_attribute_region
 entities go straight into out/<name>/pkg/maps/<map>.nav through navfix.py (idempotent); a standalone run then repacks the
-VPK. convert.py runs this after rotoblin.py; run it alone to refresh a campaign when upstream changes.
+VPK. Maps in onslaught.TABLE then get their L4D2 onslaughts rebuilt (onslaught.py). convert.py runs this after
+rotoblin.py; run it alone to refresh a campaign when upstream changes.
 """
 import glob, math, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import navfix, rotoblin, stripper2to1
+import navfix, onslaught, rotoblin, stripper2to1
 
 UPSTREAM = os.path.join(HERE, 'upstream', 'L4D2-Competitive-Rework')
 UPSTREAM_URL = 'https://github.com/SirPlease/L4D2-Competitive-Rework.git'
@@ -102,6 +103,9 @@ def port_campaign(name, rev, models_ok, repack=False):
         if ammo and start and not has_ammo_near(body, start):
             tail = '\n\n; --- [L4D1] start saferoom ammo pile (the conversion has none near info_player_start)\n' + ammo + '\n'
         open(mine, 'w', encoding='latin1').write('\n'.join(intro + head) + '\n' + body.rstrip('\n') + tail + '\n')
+        if m in onslaught.TABLE:  # the L4D2 onslaughts VScript ran, rebuilt with director_panic_forever
+            onslaught.apply(mine, m)
+            report.append(f'{m}: onslaught rebuilt ({onslaught.TABLE[m][3]})')
         ported.append(mine)
         report.append(f'{m}: {dict(stats)}')
         report += ['   ' + r for r in rep]
