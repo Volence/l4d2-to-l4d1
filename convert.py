@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 import vpkread
 import waterfix
 from bspinfo import lumps, ents, texdata, staticprops, pak
-import compstripper, l4d2to1, nav2to1, rotoblin
+import addoninfo, compstripper, l4d2to1, nav2to1, rotoblin
 
 STEAM = os.path.expanduser('~/.local/share/Steam/steamapps/common')
 L4D1 = f'{STEAM}/left 4 dead'
@@ -331,6 +331,9 @@ def main():
             os.remove(v)  # mesh variants L4D1 never reads
     if n_vtx:
         say(f'== {n_vtx} models: .dx90.vtx renamed to .vtx (the name L4D1 loads)')
+
+    # ---- addoninfo.txt: without it the Addons menu lists the VPK under another addon's title ------
+    say(f'== addoninfo.txt: "{addoninfo.write(src_dir, pkg, name)}"')
 
     # ---- pack (L4D1 only reads VPK v1) ---------------------------------------------------------
     if not os.path.exists(VENV):

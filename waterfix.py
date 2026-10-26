@@ -43,9 +43,12 @@ def l4d1_water(text, have_texture):
     """Cheap L4D1 water from an L4D2 flow-map water: keep fog, normals and surface; drop the flow keys."""
     out = ['Water', '{', '$forcecheap 1', '$envmap env_cubemap', '$envmaptint "[1 1 1]"', '$envmapcontrast 1',
            '$reflectentities 0', '$bumpframe 0']
-    for k, v in re.findall(r'^\s*"?([$%][A-Za-z0-9_]+)"?\s+(.+?)\s*$', text, re.M):
+    # A key can carry a platform condition: L4D2's liquids/water_c2m1 sets its fog colour ONLY as
+    # "360?$fogcolor" (Xbox) and "!360?$fogcolor" (PC). Missing it left fog on with no colour, which L4D1
+    # drew as a solid bright red sheet (Open Road 2, Haunted Forest). Keep the PC side, drop console ones.
+    for cond, k, v in re.findall(r'^\s*"?((?:!?[A-Za-z0-9_]+\?)?)([$%][A-Za-z0-9_]+)"?\s+(.+?)\s*$', text, re.M):
         kl = k.lower()
-        if kl not in KEEP:
+        if kl not in KEEP or cond.lower() in ('360?', 'x360?', 'ps3?'):
             continue
         val = v.strip().strip('"')
         if kl == '$normalmap' and not have_texture(val):
