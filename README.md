@@ -33,6 +33,14 @@ Admin > Setup > Campaigns so the public campaigns page tells players.
 First converted: **Crash Course ReRouted** (gamemaps 28094, author MK gave the owner permission),
 2026-10-08. All 5 maps boot on a server, and maps 1-4 have been played in the client.
 
+## Scripted bosses
+
+The report ends with every tank and witch a map spawns by itself, from `bossscan.py` (also in
+`out/<name>/rotoblin/bosses.txt`). `!!` means nothing deals with it yet, and that entry carries both fixes: fix A
+removes the map's boss in the stripper cfg, fix B turns our boss off in mapinfo. Nothing is applied for you.
+Run `./rotoblin.py` again after `flowdump.sh` for game flow percentages, or `./bossscan.py` to recheck
+every campaign against the live configs.
+
 ## Will a campaign convert?
 
 The report answers this. The deciding factor is **VScript**: L4D1 has none. If the report lists shipped

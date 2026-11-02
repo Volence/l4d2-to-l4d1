@@ -368,6 +368,11 @@ def main():
             say('== stripverify.sh: ' + line)
         if v.returncode:
             say(f'!! stripverify.sh FAILED (exit {v.returncode}): fix the ported stripper cfgs before shipping them')
+    # Last in the report so nobody misses it; the owner picks a fix for each (see bossscan.py).
+    bosses = open(os.path.join(work, 'rotoblin', 'bosses.txt')).read().splitlines()
+    say(f'== Scripted bosses: {sum(l.startswith("!!") for l in bosses)} need a decision (bossscan.py)')
+    for l in bosses:
+        say(l)
     open(os.path.join(work, 'report.txt'), 'w').write('\n'.join(rep) + '\n')
     if (not a.no_dict and r.returncode) or (v and v.returncode):
         sys.exit(1)
