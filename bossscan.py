@@ -151,7 +151,7 @@ def handled(m, e, deploy=DEPLOY):
                 re.findall(r'"min"\s+"([\d.]+)".*?"max"\s+"([\d.]+)"', ban.group(1), re.S)]
         fl = [s[3] for s in e['spots'] if s[3] is not None]
         if fl and all(any(a <= f <= c for a, c in wins) for f in fl):
-            return f'{e["kind"]}_ban_flow keeps our {e["kind"]} away from it'
+            e['ban_note'] = f'{e["kind"]}_ban_flow keeps ours from that spot, both can still spawn in one round'
     return None
 
 
@@ -163,10 +163,15 @@ def describe(m, e):
     if not e['triggers']:
         return [f'   {m}: unused {e["kind"]} spawner {e["spawner"]}, nothing in the map fires it']
     done = handled(m, e)
+    if e['finale'] and not done:
+        return [f'   {m}: scripted {e["kind"]} {e["spawner"]} is the finale\'s own tank, nothing to decide',
+                f'     started by {spots}']
     lines = [f'{"  " if done else "!!"} {m}: scripted {e["kind"]} {e["spawner"]}'
              + (' (ForceTankSpawn on the finale)' if e['finale'] else '')
              + (f' [already handled: {done}]' if done else ''),
              f'     {how}started by {spots}']
+    if e.get('ban_note'):
+        lines.append('     ' + e['ban_note'])
     if e['on_death']:
         lines.append('     when it dies: ' + ', '.join(e['on_death']))
     if not done:
