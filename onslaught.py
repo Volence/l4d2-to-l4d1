@@ -47,9 +47,6 @@ TABLE = {
                        'da4bridge: boxcar button (trainrelay1) until 15 s after the boxcar reaches boxcarpath5'),
     'hf02_thesteeple': ('hauntedforest', (238573, 'OnStartTouch', 3), (238621, 'OnPressed', 0),
                         'hf02_rolling_tunnel (Comp: _promod): the tunnel alarm until the button that stops it'),
-    'hf04_escape': ('hauntedforest', (59257, 'OnTrigger', 5), (59287, 'OnStartTouch', 0),
-                    'hf04_escape_onslaught (Comp: _promod, gauntlet finale): 5 s after the generator (relay_finale, '
-                    'where L4D2 sent ForceFinaleStart) until the tunnel end trigger that sent GauntletStopPanic'),
     'l4d2_diescraper2_streets_361': ('diescraper', (881077, 'OnTrigger', 1.5), (652799, 'OnIn', 0),
                                      'diescraper2_onslaught1_vs + _2_vs: lobby door (lobby_panic_vs) until alarm_button2'),
     'l4d2_diescraper3_mid_361': ('diescraper', (1089328, 'OnTrigger', 8), (843176, 'OnIn', 1),
@@ -63,7 +60,36 @@ TABLE = {
 #   diescraper2_onslaught3 at the elevator Comp turns into two PanicEvents; diescraper1's sewer horde is
 #   killed in versus (info_gamemode OnVersus); *_passive / *_noboss / *_quiet only retune pacing, bosses or SI.
 
+# L4D2 gauntlet finales (run to the rescue through an endless horde): deploy plugin l4d_gauntlet_finale runs them
+# (mapinfo gauntlet_finale 1: flow goal at the rescue, the finale goes straight to its escape stage, whose horde is
+# the endless one, and only the map's own tank). The cfg only says where the map's tank comes and where the horde
+# ends, at the triggers that sent ForceTankSpawn and GauntletStopPanic in L4D2.
+# map: (campaign, tank, stop, note). tank/stop = (hammerid, output, delay).
+GAUNTLET = {
+    'hf04_escape': ('hauntedforest', (59287, 'OnStartTouch', 0), (152285, 'OnStartTouch', 0),
+                    'hf04_escape gauntlet: tank at the tunnel end trigger (ForceTankSpawn + GauntletStopPanic in '
+                    'L4D2), horde over at the boat dock trigger (relay_stopgauntlet)'),
+}
+
 PREFIX = 'l4d1_onslaught'
+
+
+def wanted(m):
+    return m in TABLE or m in GAUNTLET
+
+
+def gauntlet_block(m):
+    camp, tank, stop, note = GAUNTLET[m]
+    cmd = f'{PREFIX}_gauntlet_cmd,Command'
+    lines = [BEGIN, f'; {note}', '; See l4d2to1/onslaught.py GAUNTLET and deploy plugin l4d_gauntlet_finale (mapinfo',
+             '; gauntlet_finale 1, gauntlet_goal, gauntlet_tank_pos).',
+             'add:',
+             '{', '\t"classname" "point_servercommand"', f'\t"targetname" "{PREFIX}_gauntlet_cmd"', '}',
+             'modify:']
+    for (hid, out, delay), arg in ((tank, 'gauntlet_tank'), (stop, 'gauntlet_horde 0')):
+        lines += ['{', '\tmatch:', '\t{', f'\t\t"hammerid" "{hid}"', '\t}', '\tinsert:', '\t{',
+                  f'\t\t"{out}" "{cmd},{arg},{delay:g},-1"', '\t}', '}']
+    return '\n'.join(lines + [END]) + '\n'
 
 
 def block(m):
@@ -92,26 +118,27 @@ def strip(text):
 
 def apply(path, m):
     text = strip(open(path, encoding='latin1').read())
-    open(path, 'w', encoding='latin1').write(text + ('\n' + block(m) if m in TABLE else ''))
+    extra = block(m) if m in TABLE else gauntlet_block(m) if m in GAUNTLET else ''
+    open(path, 'w', encoding='latin1').write(text + ('\n' + extra if extra else ''))
 
 
 def main(names):
     done = []
-    for m, (camp, *_rest) in TABLE.items():
+    for m, (camp, *_rest) in list(TABLE.items()) + list(GAUNTLET.items()):
         if camp in names and not os.path.exists(os.path.join(HERE, 'out', camp, 'rotoblin', 'stripper', m + '.cfg')):
             sys.exit(f'out/{camp}/rotoblin/stripper/{m}.cfg is missing (run compstripper.py {camp} first)')
     for camp in names:
         for p in sorted(glob.glob(os.path.join(HERE, 'out', camp, 'rotoblin', 'stripper', '*.cfg'))):
             m = os.path.basename(p)[:-4]
-            if m in TABLE or BEGIN in open(p, encoding='latin1').read():
+            if wanted(m) or BEGIN in open(p, encoding='latin1').read():
                 apply(p, m)  # a map dropped from the table loses its block
-                done.append(m if m in TABLE else m + ' (block removed)')
+                done.append(m if wanted(m) else m + ' (block removed)')
     return done
 
 
 if __name__ == '__main__':
     if '--list' in sys.argv:
-        for m, (camp, s, e, note) in TABLE.items():
+        for m, (camp, s, e, note) in list(TABLE.items()) + list(GAUNTLET.items()):
             print(f'{camp:14s} {m:30s} {note}')
         sys.exit()
     args = [a for a in sys.argv[1:] if not a.startswith('--')]

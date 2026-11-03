@@ -130,9 +130,9 @@ def port_campaign(name, rev, models_ok, repack=False):
             with open(mine, 'a', encoding='latin1') as fh:
                 fh.write(outtro)
             report.append(f'{m}: coop stats crawl (env_outtro_stats) killed in versus')
-        if m in onslaught.TABLE:  # the L4D2 onslaughts VScript ran, rebuilt with director_panic_forever
+        if onslaught.wanted(m):  # the L4D2 onslaught or gauntlet VScript ran, rebuilt (onslaught.py)
             onslaught.apply(mine, m)
-            report.append(f'{m}: onslaught rebuilt ({onslaught.TABLE[m][3]})')
+            report.append(f'{m}: onslaught rebuilt ({(onslaught.TABLE.get(m) or onslaught.GAUNTLET[m])[3]})')
         ported.append(mine)
         report.append(f'{m}: {dict(stats)}')
         report += ['   ' + r for r in rep]
