@@ -125,6 +125,11 @@ def port_campaign(name, rev, models_ok, repack=False):
                          '. L4D2\'s affectsFlow 0 does not exist here.\nfilter:\n' + ''.join(
                              f'{{\n\t"hammerid" "{h}"\n}}\n' for n, h, c in saferoom_blocks))
             report.append(f'{m}: filtered saferoom nav blockers ' + ', '.join(f'{n} ({c} areas)' for n, h, c in saferoom_blocks))
+        outtro = rotoblin.outtro_kill(bsp)
+        if outtro and rotoblin.OUTTRO_MARK not in done:  # coop stats crawl would cover the next versus half
+            with open(mine, 'a', encoding='latin1') as fh:
+                fh.write(outtro)
+            report.append(f'{m}: coop stats crawl (env_outtro_stats) killed in versus')
         if m in onslaught.TABLE:  # the L4D2 onslaughts VScript ran, rebuilt with director_panic_forever
             onslaught.apply(mine, m)
             report.append(f'{m}: onslaught rebuilt ({onslaught.TABLE[m][3]})')

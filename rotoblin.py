@@ -280,6 +280,26 @@ def stripper_cfg(m, title, a):
     return '\n'.join(out) + '\n'
 
 
+OUTTRO_MARK = '; --- [L4D1] coop stats crawl'
+
+
+def outtro_kill(bsp):
+    """Stripper block that kills the map's env_outtro_stats in versus, or '' if it has none.
+
+    Valve's l4d_vs_* finales have no env_outtro_stats; L4D2 maps keep theirs, so RollStatsCrawl at the versus
+    round end put the coop stats screen over the next half (Haunted Forest 4, match 075b0c79, 2026-11-03).
+    OnVersus Kill (Harry's fix) leaves coop its crawl. Killed by the map's own name: "outro" on most, "outtro" on
+    hf04_escape. An unnamed one is left: no output can reach it."""
+    d = open(bsp, 'rb').read()
+    names = sorted({kv['targetname'] for kv, _ in ents(d, lumps(d)[1])
+                    if kv.get('classname') == 'env_outtro_stats' and kv.get('targetname')})
+    if not names:
+        return ''
+    return (f'\n{OUTTRO_MARK} (env_outtro_stats): Valve\'s versus finales have none, so remove it in versus\n'
+            'add:\n{\n\t"classname" "info_gamemode"\n'
+            + ''.join(f'\t"OnVersus" "{n},Kill,,0,-1"\n' for n in names) + '}\n')
+
+
 def mission_info(pkg):
     """(map -> (title, VersusModifier)) from the converted mission file."""
     res = {}
@@ -308,7 +328,7 @@ def main(pkg):
         a = analyse(b, n, os.path.join(os.path.dirname(outdir), 'flowdump', m + '.txt'), scripts.get(m, ()))
         title, mod = info.get(m, (m, '1.0'))
         blocks.append(mapinfo_block(m, a, mod))
-        open(f'{outdir}/stripper/{m}.cfg', 'w').write(stripper_cfg(m, title, a))
+        open(f'{outdir}/stripper/{m}.cfg', 'w').write(stripper_cfg(m, title, a) + outtro_kill(b))
         flows.append(f'{m}: max flow {a["maxflow"]:.0f} ({a["source"]}), {len(a["events"])} events, '
                      f'start items {[c for c, _ in a["start_items"]]}, '
                      f'ammo added: {"yes" if a["ammo_spot"] else "no (already has one)"}')

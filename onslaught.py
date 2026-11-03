@@ -47,6 +47,9 @@ TABLE = {
                        'da4bridge: boxcar button (trainrelay1) until 15 s after the boxcar reaches boxcarpath5'),
     'hf02_thesteeple': ('hauntedforest', (238573, 'OnStartTouch', 3), (238621, 'OnPressed', 0),
                         'hf02_rolling_tunnel (Comp: _promod): the tunnel alarm until the button that stops it'),
+    'hf04_escape': ('hauntedforest', (59257, 'OnTrigger', 5), (59287, 'OnStartTouch', 0),
+                    'hf04_escape_onslaught (Comp: _promod, gauntlet finale): 5 s after the generator (relay_finale, '
+                    'where L4D2 sent ForceFinaleStart) until the tunnel end trigger that sent GauntletStopPanic'),
     'l4d2_diescraper2_streets_361': ('diescraper', (881077, 'OnTrigger', 1.5), (652799, 'OnIn', 0),
                                      'diescraper2_onslaught1_vs + _2_vs: lobby door (lobby_panic_vs) until alarm_button2'),
     'l4d2_diescraper3_mid_361': ('diescraper', (1089328, 'OnTrigger', 8), (843176, 'OnIn', 1),
