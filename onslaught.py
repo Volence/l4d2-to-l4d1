@@ -69,6 +69,10 @@ GAUNTLET = {
     'hf04_escape': ('hauntedforest', (59287, 'OnStartTouch', 0), (152285, 'OnStartTouch', 0),
                     'hf04_escape gauntlet: tank at the tunnel end trigger (ForceTankSpawn + GauntletStopPanic in '
                     'L4D2), horde over at the boat dock trigger (relay_stopgauntlet)'),
+    'cwm4_building': ('carriedoff', (216799, 'OnTrigger', 0), (216799, 'OnTrigger', 0),
+                      'cwm_finale gauntlet: trigger_stopgauntlet sent GauntletStopPanic, and the L4D2 gauntlet then '
+                      'spawned its tank (Comp teleported it to a fixed spot, cwm4_building_tank_helper_promod); here '
+                      'the same trigger ends the horde and spawns the tank there'),
 }
 
 PREFIX = 'l4d1_onslaught'
