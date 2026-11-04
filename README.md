@@ -186,6 +186,9 @@ it (`stripverify.sh`, after dictbuild.sh; `--no-verify` skips). Rerun alone with
   "rendermode" "10") reusing a box brush model of the map (`*N`, pick one with bspinfo / the models lump) moved
   under the surface. A trigger's brush gives props a hull while traces (players, bullets) pass through. Example:
   deploy cwm1_intro.cfg `eb_fix_large_displacement_props` (match 990 forklift through the tent grass).
+  A modify that turns a prop into a prop_dynamic keeps its spawnflags, and 256 (prop_physics: output on +USE) means
+  "start with collision disabled" on a prop_dynamic: flagged `!! REVIEW` too (upstream cdta_02road's gas pumps, which
+  it patched with BlockType 4 boxes; the L4D1 fix is replace spawnflags 0 + insert solid 6).
   VScript outputs and L4D2-only inputs go (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
   IgnoreFallDamageWithoutReset, HowAngry: L4D1 cannot ignore fall damage at all); ForcePanicEvent -> PanicEvent.
   Every change is tagged `[L4D1]` in the cfg; out/<name>/rotoblin/compstripper.txt lists them.

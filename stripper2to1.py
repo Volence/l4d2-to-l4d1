@@ -181,6 +181,21 @@ def port_modify(match, acts, hits2, n1, dst_ents):
     return lines, '; '.join(note)
 
 
+def dynamic_without_collision(acts, ents):
+    """A modify that makes a prop a prop_dynamic keeps its spawnflags, and 256 (prop_physics: output on +USE) is
+    "start with collision disabled" on a prop_dynamic (cdta_02road gas pumps: hittables passed through, and the
+    BlockType 4 boxes upstream patched them with cannot stop props in L4D1). Returns a review note, or None."""
+    to_dyn = any(k.lower() == 'classname' and v.lower().startswith('prop_dynamic') for s_, k, v in acts if s_ != 'match')
+    sets_flags = any(k.lower() == 'spawnflags' for s_, k, v in acts if s_ != 'match')
+    if not to_dyn or sets_flags:
+        return None
+    bad = [e for e in ents if e.get('spawnflags', '0').lstrip('-').isdigit() and int(e.get('spawnflags', '0')) & 256]
+    if not bad:
+        return None
+    return (f'!! REVIEW: {len(bad)} matched prop(s) keep spawnflags 256, which on a prop_dynamic disables collision:'
+            ' replace "spawnflags" (clear 256) and insert "solid" "6" if they should be solid')
+
+
 def port_block(key, replace, outs, match=None):
     L = ['{', '\tmatch:', '\t{']
     L += [f'\t\t"{k}" "{v}"' for k, v in ([key] if key else match)]
@@ -364,6 +379,10 @@ def port(cfg_text, src_ents, dst_ents, models_ok):
             stats['modify'] += 1
             block_out, rep = port_modify(m, acts, hits2, n1, dst_ents)
             rep = rep or 'outputs rewritten for L4D1 (comma separators, L4D1 input names)'
+            nocoll = dynamic_without_collision(acts, matches(dst_ents, m) or hits2)
+            if nocoll:
+                report.append(f'!! MODIFY {label}: {nocoll}')
+                out.append(f'; [L4D1] {nocoll}')
             if block_out != 'same':
                 report.append(f'MODIFY L4D2 {len(hits2)} vs L4D1 {n1}: {label}: {rep}')
             if block_out is None:
