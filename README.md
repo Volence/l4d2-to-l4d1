@@ -180,6 +180,12 @@ it (`stripverify.sh`, after dictbuild.sh; `--no-verify` skips). Rerun alone with
   converted one. Where the converter renamed a class (weapon_spawn, weapon_item_spawn) it rematches by hammerid; for
   weapon_selection / itemN edits it converts the L4D2 entity again with the edit applied (same pick) and sets the
   L4D1 class. env_physics_blocker -> env_player_blocker (BlockType 4 -> 0: L4D1 blockers never stop props).
+  L4D1 has no env_physics_blocker, so a BlockType 4 blocker loses its prop half: it is tagged `!! REVIEW` in the
+  cfg and listed first in compstripper.txt and on stdout. Upstream uses these to keep hittables out of
+  displacements; port that half by hand as a solid physics hull, e.g. a `func_brush` ("Solidity" "2",
+  "rendermode" "10") reusing a box brush model of the map (`*N`, pick one with bspinfo / the models lump) moved
+  under the surface. A trigger's brush gives props a hull while traces (players, bullets) pass through. Example:
+  deploy cwm1_intro.cfg `eb_fix_large_displacement_props` (match 990 forklift through the tent grass).
   VScript outputs and L4D2-only inputs go (BeginScript, EndScript, GauntletStopPanic, EndCustomScriptedStage,
   IgnoreFallDamageWithoutReset, HowAngry: L4D1 cannot ignore fall damage at all); ForcePanicEvent -> PanicEvent.
   Every change is tagged `[L4D1]` in the cfg; out/<name>/rotoblin/compstripper.txt lists them.

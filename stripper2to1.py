@@ -9,7 +9,7 @@ adds go through the converter's own convert_entity(), plus the rules L4D1 needs 
 
 - env_physics_blocker does not exist in L4D1; env_player_blocker is its L4D1 ancestor (mins/maxs, BlockType
   0 everyone / 1 survivors / 2 player infected). L4D2 BlockType 4 (players and physics objects) keeps only
-  its player half (0): no L4D1 player blocker stops props. boxmins/boxmaxs (L4D2's oriented box) become
+  its player half (0): no L4D1 player blocker stops props, so that is reported as '!! REVIEW' (PROPS_UNBLOCKED). boxmins/boxmaxs (L4D2's oriented box) become
   mins/maxs; a rotated box is left with its angles for deploy/tools/blocker-angles to split, because L4D1
   ignores angles on a player blocker.
 - L4D2-only classes (point_nav_attribute_region, script_nav_blocker, script_clip_vphysics, logic_script) are
@@ -28,6 +28,13 @@ NO_L4D1_CLASS = {'point_nav_attribute_region', 'script_nav_attribute_region', 's
 INFECTED_CLASS = {'7': '4', '8': '5'}
 # Inputs these configs call that L4D1's server.so does not have (checked against its strings 2026-10-21).
 # L4D1 cannot ignore fall damage at all, so the comp ladder fall-damage triggers have no port.
+# L4D1 has no env_physics_blocker, and no player blocker stops props, so BlockType 4's prop half is lost. Upstream
+# uses it to keep hittables out of displacements (cwm1_intro's tent grass swallowed the forklift, match 990): the
+# L4D1 fix is a solid physics hull, e.g. a func_brush reusing a box brush model of the map (deploy cwm1_intro.cfg
+# eb_fix_large_displacement_props). Notes starting with '!!' are listed first in the report.
+PROPS_UNBLOCKED = ('!! REVIEW: BlockType 4 also stopped physics props (hittables) in L4D2; L4D1 has no'
+                   ' env_physics_blocker and this blocker stops players only. Port the prop half by hand'
+                   ' (func_brush on a box brush model, see README)')
 L2_ONLY_INPUTS = {'ignorefalldamagewithoutreset', 'ignorefalldamage', 'gauntletstoppanic', 'endcustomscriptedstage',
                   'howangry', 'endscript', 'beginscript'}
 
@@ -270,8 +277,9 @@ def translate_add(pairs, notes):
             if kl == 'classname':
                 v = 'env_player_blocker'
             elif kl == 'blocktype' and v in ('3', '4'):
-                notes.append(f'BlockType {v} -> {"2" if v == "3" else "0"}'
-                             + (' (L4D1 blockers never stop physics props)' if v == '4' else ''))
+                notes.append(f'BlockType {v} -> {"2" if v == "3" else "0"}')
+                if v == '4':
+                    notes.append(PROPS_UNBLOCKED)
                 v = '2' if v == '3' else '0'
             elif kl in ('mins', 'maxs') and has_box:
                 continue  # L4D2 sizes the oriented box from boxmins/boxmaxs; TLS writes both, nearly always equal
@@ -381,7 +389,8 @@ def port(cfg_text, src_ents, dst_ents, models_ok):
             stats['add left out'] += 1
             continue
         if notes:
-            report.append(f'ADD changed: {label} ({"; ".join(notes)})')
+            report.append(('!! ' if any(n.startswith('!!') for n in notes) else '')
+                          + f'ADD changed: {label} ({"; ".join(notes)})')
         out += [f'; [L4D1] {n}' for n in notes] + ['{'] + [f'\t{l.strip()}' for l in keep_comments] + \
                [f'\t"{k}" "{v}"' for k, v in new] + ['}']
     return '\n'.join(out), report, stats
@@ -411,5 +420,5 @@ if __name__ == '__main__':
     res, rep, st = port(text, load_ents(src), load_ents(dst), ok)
     open(outp, 'w', encoding='latin1').write(res)
     print(os.path.basename(cfg), dict(st))
-    for r in rep:
+    for r in sorted(rep, key=lambda r: not r.startswith('!!')):
         print('  ', r)

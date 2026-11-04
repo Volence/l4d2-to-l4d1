@@ -158,8 +158,13 @@ def port_campaign(name, rev, models_ok, repack=False):
         subprocess.run([VENV + '/bin/python', '-c', 'import sys, vpk; p = vpk.new(sys.argv[1]); p.version = 1; p.save(sys.argv[2])',
                         os.path.join(work, 'pkg'), vpk], check=True, cwd='/tmp')
         report.append(f'nav fixes changed {", ".join(nav_changed)}: repacked {os.path.basename(vpk)}')
+    review = [r.strip() for r in report if '!!' in r]  # needs a person: first in the file and on stdout
+    for r in review:
+        print('compstripper:', r)
     open(os.path.join(work, 'rotoblin', 'compstripper.txt'), 'w').write(
-        f'Comp Rework {rev}: {len(ported)} maps ported\n' + '\n'.join(report) + '\n')
+        f'Comp Rework {rev}: {len(ported)} maps ported\n'
+        + (f'{len(review)} need review:\n' + '\n'.join('  ' + r for r in review) + '\n\n' if review else '')
+        + '\n'.join(report) + '\n')
     return ported, report
 
 
