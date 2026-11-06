@@ -69,7 +69,8 @@ TABLE = {
 GAUNTLET = {
     'hf04_escape': ('hauntedforest', (59287, 'OnStartTouch', 0), (152285, 'OnStartTouch', 0),
                     'hf04_escape gauntlet: tank at the tunnel end trigger (ForceTankSpawn + GauntletStopPanic in '
-                    'L4D2), horde over at the boat dock trigger (relay_stopgauntlet)'),
+                    'L4D2; ForceTankSpawn does nothing in a gauntlet, so the tank waits for the commons: mapinfo '
+                    'gauntlet_tank_wait 1), horde over at the boat dock trigger (relay_stopgauntlet)'),
     'cwm4_building': ('carriedoff', (216799, 'OnTrigger', 0), None,
                       'cwm_finale gauntlet: trigger_stopgauntlet sent GauntletStopPanic, and the L4D2 gauntlet then '
                       'spawned its tank once the commons were dead (Comp teleported it to a fixed spot, '
