@@ -114,6 +114,11 @@ def port_campaign(name, rev, models_ok, repack=False):
                          ' sprite renderer"), every frame\nfilter:\n' + ''.join(
                              f'{{\n\t"classname" "info_particle_system"\n\t"effect_name" "{fx}"\n}}\n' for fx in dead_fx))
             report.append(f'{m}: filtered undrawable particles {", ".join(dead_fx)}')
+        post_io = post_io_block(bsp)
+        if post_io:  # L4D1's info_gamemode has no On<Mode>PostIO: those outputs never fire (Diescraper 3's maze)
+            with open(mine, 'a', encoding='latin1') as fh:
+                fh.write(post_io)
+            report.append(f'{m}: info_gamemode OnVersusPostIO outputs re-fired from OnVersus')
         navp = os.path.join(work, 'pkg', 'maps', m + '.nav')
         done = open(mine, encoding='latin1').read()
         saferoom_blocks = [(n, h, c) for n, h, c in (navblock.checkpoint_blockers(bsp, navp) if os.path.exists(navp) else [])
@@ -166,6 +171,27 @@ def port_campaign(name, rev, models_ok, repack=False):
         + (f'{len(review)} need review:\n' + '\n'.join('  ' + r for r in review) + '\n\n' if review else '')
         + '\n'.join(report) + '\n')
     return ported, report
+
+
+def post_io_block(bsp):
+    """Stripper text giving each info_gamemode's OnVersusPostIO outputs an OnVersus copy, or ''.
+
+    L4D1's info_gamemode only has OnCoop/OnVersus/OnSurvival (server.so), so a converted map's PostIO outputs are dead.
+    Diescraper 3's cubicle maze is picked from OnVersusPostIO: dead, block 1's clip (a template) never spawned and
+    its boxes are non-solid, so survivors walked through the side Comp Rework closes (Traps, 2026-11-05)."""
+    out = []
+    for kv in stripper2to1.load_ents(bsp):
+        if kv.get('classname') != 'info_gamemode' or not kv.get('hammerid'):
+            continue
+        outs = [v for k, v in kv.pairs if k == 'onversuspostio']
+        if not outs:
+            continue
+        out.append('{\n\tmatch:\n\t{\n\t\t"classname" "info_gamemode"\n\t\t"hammerid" "%s"\n\t}\n\tinsert:\n\t{\n%s\t}\n}\n'
+                   % (kv['hammerid'], ''.join(f'\t\t"OnVersus" "{v}"\n' for v in outs)))
+    if not out:
+        return ''
+    return ('\n; --- [L4D1] info_gamemode OnVersusPostIO does not exist in L4D1 (only OnCoop/OnVersus/OnSurvival): fire'
+            ' those outputs from OnVersus\nmodify:\n' + ''.join(out))
 
 
 def model_checker(name):
