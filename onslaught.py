@@ -64,15 +64,17 @@ TABLE = {
 # (mapinfo gauntlet_finale 1: flow goal at the rescue, the finale goes straight to its escape stage, whose horde is
 # the endless one, and only the map's own tank). The cfg only says where the map's tank comes and where the horde
 # ends, at the triggers that sent ForceTankSpawn and GauntletStopPanic in L4D2.
-# map: (campaign, tank, stop, note). tank/stop = (hammerid, output, delay).
+# map: (campaign, tank, stop, note). tank/stop = (hammerid, output, delay). stop None = the horde runs until the round
+# ends (only paused while the map's tank lives).
 GAUNTLET = {
     'hf04_escape': ('hauntedforest', (59287, 'OnStartTouch', 0), (152285, 'OnStartTouch', 0),
                     'hf04_escape gauntlet: tank at the tunnel end trigger (ForceTankSpawn + GauntletStopPanic in '
                     'L4D2), horde over at the boat dock trigger (relay_stopgauntlet)'),
-    'cwm4_building': ('carriedoff', (216799, 'OnTrigger', 0), (216799, 'OnTrigger', 0),
+    'cwm4_building': ('carriedoff', (216799, 'OnTrigger', 0), None,
                       'cwm_finale gauntlet: trigger_stopgauntlet sent GauntletStopPanic, and the L4D2 gauntlet then '
-                      'spawned its tank (Comp teleported it to a fixed spot, cwm4_building_tank_helper_promod); here '
-                      'the same trigger ends the horde and spawns the tank there'),
+                      'spawned its tank once the commons were dead (Comp teleported it to a fixed spot, '
+                      'cwm4_building_tank_helper_promod) and brought the horde back when it died; here the same '
+                      'trigger pauses the horde and the plugin spawns the tank there (mapinfo gauntlet_tank_wait 1)'),
 }
 
 PREFIX = 'l4d1_onslaught'
@@ -90,7 +92,10 @@ def gauntlet_block(m):
              'add:',
              '{', '\t"classname" "point_servercommand"', f'\t"targetname" "{PREFIX}_gauntlet_cmd"', '}',
              'modify:']
-    for (hid, out, delay), arg in ((tank, 'gauntlet_tank'), (stop, 'gauntlet_horde 0')):
+    for trig, arg in ((tank, 'gauntlet_tank'), (stop, 'gauntlet_horde 0')):
+        if trig is None:
+            continue
+        hid, out, delay = trig
         lines += ['{', '\tmatch:', '\t{', f'\t\t"hammerid" "{hid}"', '\t}', '\tinsert:', '\t{',
                   f'\t\t"{out}" "{cmd},{arg},{delay:g},-1"', '\t}', '}']
     return '\n'.join(lines + [END]) + '\n'
